@@ -1,7 +1,7 @@
-def imgTransformFromArray(imgA, ncols):
+def imgImportFromArray(imgA, ncols):
     return [imgA[i:i+ncols] for i in range(0, len(imgA), ncols)]
     
-def imgTransformToArray(imgAA):
+def imgExportToArray(imgAA):
     imgA = []
     for row in imgAA:
         for pixel in row:
