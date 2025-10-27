@@ -110,7 +110,7 @@ class cckkImage:
         self.imgAA = result
         return self
 
-    def imgMove(self, dx, dy, fill):
+    def move(self, dx, dy, fill):
         resultX = []
         result = []
         
