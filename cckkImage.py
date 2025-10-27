@@ -72,10 +72,10 @@ class cckkImage:
     """Class representation of an image on a SenseHat"""
     imgAA = None
 
-    def __init__(self, imgA = None):
+    def __init__(self, imgA = None, ncols = 8):
         self.imgAA = None
         if (imgA is not None):
-            self.setFromArray(imgA)
+            self.setFromArray(imgA, ncols)
 
     def setFromArray(self, imgA, ncols):
         self.imgAA = [imgA[i:i+ncols] for i in range(0, len(imgA), ncols)]
