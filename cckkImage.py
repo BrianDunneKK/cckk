@@ -38,21 +38,19 @@ class cckkImage:
         return self
 
     def set_camera(self, camera_horiz = "C", camera_vert = "C"):
-        match camera_horiz.upper():
-            case "L":
-                self.img_xpos = 0
-            case "R":
-                self.img_xpos = self.img_cols - self.camera_cols
-            case _:
-                self.img_xpos = int((self.img_cols - self.camera_cols)/2)
+        if camera_horiz.upper() == "L":
+            self.img_xpos = 0
+        elif camera_horiz.upper() == "R":
+            self.img_xpos = self.img_cols - self.camera_cols
+        else:
+            self.img_xpos = int((self.img_cols - self.camera_cols)/2)
         
-        match camera_vert.upper():
-            case "T":
-                self.img_ypos = 0
-            case "B":
-                self.img_ypos = self.img_rows - self.camera_rows
-            case _:
-                self.img_ypos = int((self.img_rows - self.camera_rows)/2)
+        if camera_vert.upper() == "T":
+            self.img_ypos = 0
+        elif camera_vert.upper() == "B":
+            self.img_ypos = self.img_rows - self.camera_rows
+        else:
+            self.img_ypos = int((self.img_rows - self.camera_rows)/2)
 
         return self
 
