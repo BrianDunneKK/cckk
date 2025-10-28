@@ -41,16 +41,16 @@ class cckkImage:
         if camera_horiz.upper() == "L":
             self.img_xpos = 0
         elif camera_horiz.upper() == "R":
-            self.img_xpos = self.img_cols - self.camera_cols
+            self.img_xpos = self.camera_cols - self.img_cols
         else:
-            self.img_xpos = int((self.img_cols - self.camera_cols)/2)
+            self.img_xpos = int((self.camera_cols - self.img_cols)/2)
         
         if camera_vert.upper() == "T":
             self.img_ypos = 0
         elif camera_vert.upper() == "B":
-            self.img_ypos = self.img_rows - self.camera_rows
+            self.img_ypos = self.camera_rows - self.img_rows
         else:
-            self.img_ypos = int((self.img_rows - self.camera_rows)/2)
+            self.img_ypos = int((self.camera_rows - self.img_rows)/2)
 
         return self
 
