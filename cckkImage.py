@@ -62,7 +62,6 @@ class cckkImage:
                 col_img = col - self.img_xpos
                 row_img = row - self.img_ypos
                 if (col_img >= 0 and col_img < self.img_cols and row_img >= 0 and row_img < self.img_rows):
-                    print(row_img, ", ", col_img)
                     camera_imgA[row*self.camera_rows + col] = self.imgAA[row_img][col_img]
         return camera_imgA
 
@@ -89,6 +88,10 @@ class cckkImage:
         return self
 
     def move(self, dx, dy, fill):
+        self.img_xpos += dx
+        self.img_ypos += dy
+        return self
+        
         resultX = []
         result = []
         
