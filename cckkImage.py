@@ -62,6 +62,7 @@ class cckkImage:
                 col_img = col - self.img_xpos
                 row_img = row - self.img_ypos
                 if (col_img >= 0 & col_img < self.img_cols and row_img >= 0 & row_img < self.img_rows):
+                    print(row_img, ", ", col_img)
                     camera_imgA[row*self.camera_rows + col] = self.imgAA[row_img][col_img]
         return camera_imgA
 
