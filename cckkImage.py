@@ -87,7 +87,7 @@ class cckkImage:
         self.imgAA = result
         return self
 
-    def move(self, dx, dy, fill):
+    def move(self, dx, dy):
         self.img_xpos += dx
         self.img_ypos += dy
         return self
