@@ -34,10 +34,10 @@ class cckkImage:
 
     def setFromArray(self, imgA, img_cols = 8, camera_horiz = "C", camera_vert = "C"):
         self._imgAA = [imgA[i:i+img_cols] for i in range(0, len(imgA), img_cols)]
-        self.set_camera(camera_horiz, camera_vert)
+        self.align_image(camera_horiz, camera_vert)
         return self
 
-    def set_camera(self, camera_horiz = "C", camera_vert = "C"):
+    def align_image(self, camera_horiz = "C", camera_vert = "C"):
         if camera_horiz.upper() == "L":
             self._img_xpos = 0
         elif camera_horiz.upper() == "R":
