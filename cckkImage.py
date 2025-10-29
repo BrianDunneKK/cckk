@@ -91,24 +91,23 @@ class cckkImage:
     def ypos(self, value):
         self._img_ypos = value
 
-
+    def move(self, dx, dy):
+        self._img_xpos += dx
+        self._img_ypos += dy
+        return self
+        
     def roll(self, dx, dy):
         result = []
-        for r in range(nrows):
+        for r in range(self.img_rows):
             new_r = (r - dy + self.img_rows) % self.img_rows
             new_row = []
-            for c in range(ncols):
+            for c in range(self.img_cols):
                 new_c = (c - dx + self.img_cols) % self.img_cols
                 new_row.append(self._imgAA[new_r][new_c])
             result.append(new_row)
         self._imgAA = result
         return self
 
-    def move(self, dx, dy):
-        self._img_xpos += dx
-        self._img_ypos += dy
-        return self
-        
     def imgPrint(self):
         str = ""
         for row in self._imgAA:
