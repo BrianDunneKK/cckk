@@ -19,7 +19,7 @@ class cckkImage:
         , 's': (192,192,192) # Silver
         }
 
-    def __init__(self, imgA = None, img_cols = 8, camera_cols = 8, camera_rows = 8, camera_horiz = "C", camera_vert = "C", camera_fill = [0,0,0]):
+    def __init__(self, imgA = None, imgStr = None, img_cols = 8, camera_cols = 8, camera_rows = 8, camera_horiz = "C", camera_vert = "C", camera_fill = [0,0,0]):
         """Contructs a cckkImage object
 
         Args:
@@ -53,6 +53,8 @@ class cckkImage:
 
         if (imgA is not None):
             self.setFromArray(imgA, img_cols, camera_horiz, camera_vert)
+        elif (imgStr is not None):
+            self.setFromString(imgStr, None, camera_horiz, camera_vert)
 
     def setFromArray(self, imgA, img_cols = 8, camera_horiz = "C", camera_vert = "C"):
         self._imgAA = [imgA[i:i+img_cols] for i in range(0, len(imgA), img_cols)]
