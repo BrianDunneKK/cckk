@@ -76,8 +76,6 @@ class cckkImage:
                 if ch in colour_dict:
                     line_pixels.append(colour_dict[ch])
                 else:
-                    print("<"+img_line+">")
-                    print("<"+ch+">")
                     raise Exception("Invalid colour character '" + ch + "' in image string")
             self._imgAA.append(line_pixels)
 
@@ -139,9 +137,30 @@ class cckkImage:
     def ypos(self, value):
         self._img_ypos = value
 
-    def move(self, dx, dy):
+    def move(self, dx, dy, keep = False):
+        """Move the image (relative to the camera)
+
+        Args:
+        dx: Change in x-position
+        dy: Change in y-position
+        keep: If True, keeps the image fully within the camera view
+
+        Returns:
+        View of the image through the camera as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+        """
         self._img_xpos += dx
         self._img_ypos += dy
+
+        if keep:
+            if self._img_xpos < 0:
+                self._img_xpos = 0
+            if self._img_ypos < 0:
+                self._img_ypos = 0
+            if self._img_xpos + self.img_cols > self._camera_cols:
+                self._img_xpos = self._camera_cols - self.img_cols
+            if self._img_ypos + self.img_rows > self._camera_rows:
+                self._img_ypos = self._camera_rows - self.img_rows
+
         return self.pixels()
         
     def roll(self, dx, dy):
