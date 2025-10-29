@@ -1,11 +1,23 @@
 class cckkImage:
     """Class representation of an image on a SenseHat"""
-    _imgAA = None
-    _img_xpos = 0    # X-position of the image relative to the camera
-    _img_ypos = 0    # Y-position of the image relative to the camera
-    _camera_cols = 0 # Number of columns in the camera
-    _camera_rows = 0 # Number of rows in the camera
-    _camera_fill = None # Fill colour if the image does not fill the camera. Default: [0,0,0] (black)
+    def_colour_dict = {
+        '.': (0,0,0)         # Black
+        , 'w': (255,255,255) # White
+        , 'r': (255,0,0)     # Red
+        , 'g': (0,255,0)     # Green
+        , 'b': (0,0,255)     # Blue
+        , 'c': (0,255,255)   # Cyan
+        , 'y': (255,255,0)   # Yellow
+        , 'm': (255,0,255)   # Magenta
+        , 'W': (128,128,128) # Gray
+        , 'R': (128,0,0)     # Maroon
+        , 'G': (0,128,0)     # Dark Green
+        , 'B': (0,0,128)     # Navy
+        , 'C': (0,128,128)   # Teal
+        , 'Y': (128,128,0)   # Olive
+        , 'M': (128,0,128)   # Purple
+        , 's': (192,192,192) # Silver
+        }
 
     def __init__(self, imgA = None, img_cols = 8, camera_cols = 8, camera_rows = 8, camera_horiz = "C", camera_vert = "C", camera_fill = [0,0,0]):
         """Contructs a cckkImage object
@@ -25,6 +37,16 @@ class cckkImage:
         Raises:
         Exception: If invalid image specified
         """
+
+        # Assign default values
+        self._imgAA = None
+        self._img_xpos = 0    # X-position of the image relative to the camera
+        self._img_ypos = 0    # Y-position of the image relative to the camera
+        self._camera_cols = 0 # Number of columns in the camera
+        self._camera_rows = 0 # Number of rows in the camera
+        self._camera_fill = None # Fill colour if the image does not fill the camera. Default: [0,0,0] (black)
+
+
         self._camera_cols = camera_cols
         self._camera_rows = camera_rows
         self._camera_fill = camera_fill
@@ -35,7 +57,29 @@ class cckkImage:
     def setFromArray(self, imgA, img_cols = 8, camera_horiz = "C", camera_vert = "C"):
         self._imgAA = [imgA[i:i+img_cols] for i in range(0, len(imgA), img_cols)]
         self.align_image(camera_horiz, camera_vert)
-        return self
+        return self.pixels()
+
+    def setFromString(self, imgStr, colour_dict = None, camera_horiz = "C", camera_vert = "C"):
+        if (colour_dict is None):
+            colour_dict = cckkImage.def_colour_dict
+
+        self._imgAA = []
+        img_lines = imgStr.splitlines()
+        if (img_lines[0].strip() == ""):
+            img_lines = img_lines[1:]
+
+        for img_line in img_lines:
+            line_pixels = []
+            for ch in img_line.strip():
+                if ch in colour_dict:
+                    line_pixels.append(colour_dict[ch])
+                else:
+                    raise Exception("Invalid colour character '" + ch + "' in image string")
+            self._imgAA.append(line_pixels)
+
+        self.align_image(camera_horiz, camera_vert)
+
+        return self.pixels()
 
     def align_image(self, camera_horiz = "C", camera_vert = "C"):
         if camera_horiz.upper() == "L":
