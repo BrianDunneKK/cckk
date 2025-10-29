@@ -59,8 +59,8 @@ class cckkImage:
         camera_imgA = [self.camera_fill] * (self.camera_cols * self.camera_rows)
         for row in range(self.camera_rows):
             for col in range(self.camera_cols):
-                col_img = col + self.img_xpos
-                row_img = row + self.img_ypos
+                col_img = col - self.img_xpos
+                row_img = row - self.img_ypos
                 if (col_img >= 0 & col_img < self.img_cols and row_img >= 0 & row_img < self.img_rows):
                     camera_imgA[row*self.camera_rows + col] = self.imgAA[row_img][col_img]
         return camera_imgA
