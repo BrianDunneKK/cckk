@@ -52,7 +52,7 @@ class cckkImage:
         else:
             self._img_ypos = int((self._camera_rows - self.img_rows)/2)
 
-        return self
+        return self.pixels()
 
     def pixels(self):
         """Image as seen through the camera"""
@@ -94,7 +94,7 @@ class cckkImage:
     def move(self, dx, dy):
         self._img_xpos += dx
         self._img_ypos += dy
-        return self
+        return self.pixels()
         
     def roll(self, dx, dy):
         result = []
@@ -106,7 +106,7 @@ class cckkImage:
                 new_row.append(self._imgAA[new_r][new_c])
             result.append(new_row)
         self._imgAA = result
-        return self
+        return self.pixels()
 
     def imgPrint(self):
         str = ""
