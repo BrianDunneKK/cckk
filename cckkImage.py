@@ -76,6 +76,8 @@ class cckkImage:
                 if ch in colour_dict:
                     line_pixels.append(colour_dict[ch])
                 else:
+                    print("<"+img_line+">")
+                    print("<"+ch+">")
                     raise Exception("Invalid colour character '" + ch + "' in image string")
             self._imgAA.append(line_pixels)
 
