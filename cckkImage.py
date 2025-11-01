@@ -295,7 +295,7 @@ class cckkImage:
     def ypos(self):
         return self._img_ypos
 
-    @xpos.setter
+    @ypos.setter
     def ypos(self, value):
         self._img_ypos = value
 
