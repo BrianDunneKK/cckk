@@ -1,5 +1,65 @@
 import copy
 
+class cckkRectangle:
+    def __init__(self, xcols = 0, yrows = 0, xpos = 0, ypos = 0):
+        """Contructs a cckkRectangle object.
+
+        Args:
+        xcols: Number of columns in the rectangle
+        yrows: Number of rows in the rectangle
+        xpos: X-position of the rectangle
+        ypos: Y-position of the rectangle
+
+        Returns:
+        cckkRectangle  object
+
+        Raises:
+        Exception: Never
+        """
+        # Assign default values
+        self._xcols = xcols # No. of columns in the rectangle
+        self._yrows = yrows # No. of rows in the rectangle
+        self._xpos = xpos   # X-position of the rectangle
+        self._ypos = ypos   # Y-position of the rectangle
+
+    @property
+    def xcols(self):
+        """No. of columns in the rectangle"""
+        return self._xcols
+    
+    @xcols.setter
+    def xcols(self, value):
+        self._xcols = value
+
+    @property
+    def yrows(self):
+        """No. of rows in the rectangle"""
+        return self._yrows
+
+    @yrows.setter
+    def yrows(self, value):
+        self._yrows = value
+
+    @property
+    def xpos(self):
+        return self._xpos
+
+    @xpos.setter
+    def xpos(self, value):
+        self._xpos = value
+
+    @property
+    def ypos(self):
+        return self._ypos
+
+    @ypos.setter
+    def ypos(self, value):
+        self._ypos = value
+
+    def str(self):  
+        return "cckkRectangle: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
+
+
 class cckkViewer:
     def __init__(self, xcols = 8, yrows = 8, xpos = 0, ypos = 0, fill = [0,0,0], images = []):
         """Contructs a cckkViewer object.
@@ -21,10 +81,7 @@ class cckkViewer:
         """
 
         # Assign default values
-        self._xcols = xcols # No. of columns in the viewer
-        self._yrows = yrows # No. of rows in the viewer
-        self._xpos = xpos   # X-position of the viewer
-        self._ypos = ypos   # Y-position of the viewer
+        self._rect = cckkRectangle(xcols, yrows, xpos, ypos)
         self._fill = fill   # Fill colour if the image does not fill the viewer
         self._mer_xpos = 0  # X-position of the minimum enclosing rectangle of the images
         self._mer_ypos = 0  # Y-position of the minimum enclosing rectangle of the images
@@ -37,28 +94,28 @@ class cckkViewer:
     @property
     def xcols(self):
         """No. of columns in the image"""
-        return self._xcols
+        return self._rect.xcols
     
     @property
     def yrows(self):
         """No. of rows in the image"""
-        return self._yrows
+        return self._rect.yrows
 
     @property
     def xpos(self):
-        return self._xpos
+        return self._rect.xpos
 
     @xpos.setter
     def xpos(self, value):
-        self._xpos = value
+        self._rect.xpos = value
 
     @property
     def ypos(self):
-        return self._ypos
+        return self._rect.ypos
 
     @ypos.setter
     def ypos(self, value):
-        self._ypos = value
+        self._rect.ypos = value
 
     @property
     def background(self):
@@ -175,9 +232,10 @@ class cckkViewer:
                     
             return self.view()
         
-
     def str(self):
-        str = "cckkViewer: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
+        str = "cckkViewer:\n"
+        str += "  Fill: " + str(self._fill) + "\n"
+        str += "  " + self._rect.str() + "\n"
         str += "  MER: " + str(self._mer_xcols) + " x " + str(self._mer_yrows) + " at (" + str(self._mer_xpos) + "," + str(self._mer_ypos) + ")\n"
         str += "  Images: " + str(len(self._images)) + "\n"
         return str
@@ -224,12 +282,11 @@ class cckkImage:
 
         # Assign default values
         self._imgAA = None    # Two-dimensional array of image pixels
-        self._img_xpos = 0    # X-position of the image relative to the viewer
-        self._img_ypos = 0    # Y-position of the image relative to the viewer
+        self._rect = cckkRectangle(0, 0, 0, 0) # Rectangle representing the image size and position
+
         self._viewer_cols = 0 # Number of columns in the viewer
         self._viewer_rows = 0 # Number of rows in the viewer
         self._viewer_fill = None # Fill colour if the image does not fill the viewer. Default: [0,0,0] (black)
-
 
         self._viewer_cols = viewer_cols
         self._viewer_rows = viewer_rows
@@ -243,6 +300,7 @@ class cckkImage:
     def setFromArray(self, imgA, img_cols = 8, viewer_horiz = "C", viewer_vert = "C"):
         self._imgAA = [imgA[i:i+img_cols] for i in range(0, len(imgA), img_cols)]
         self.align_image(viewer_horiz, viewer_vert)
+        self.update_size()
         return self
 
     def setFromString(self, imgStr, colour_dict = None, viewer_horiz = "C", viewer_vert = "C"):
@@ -267,24 +325,25 @@ class cckkImage:
                     raise Exception("Invalid colour character '" + ch + "' in image string")
             self._imgAA.append(line_pixels)
 
+        self.update_size()
         self.align_image(viewer_horiz, viewer_vert)
 
         return self
 
     def align_image(self, viewer_horiz = "C", viewer_vert = "C"):
         if viewer_horiz.upper() == "L":
-            self._img_xpos = 0
+            self.xpos = 0
         elif viewer_horiz.upper() == "R":
-            self._img_xpos = self._viewer_cols - self.xcols
+            self.xpos = self._viewer_cols - self.xcols
         else:
-            self._img_xpos = int((self._viewer_cols - self.xcols)/2)
+            self.xpos = int((self._viewer_cols - self.xcols)/2)
         
         if viewer_vert.upper() == "T":
-            self._img_ypos = 0
+            self.ypos = 0
         elif viewer_vert.upper() == "B":
-            self._img_ypos = self._viewer_rows - self.yrows
+            self.ypos = self._viewer_rows - self.yrows
         else:
-            self._img_ypos = int((self._viewer_rows - self.yrows)/2)
+            self.ypos = int((self._viewer_rows - self.yrows)/2)
 
         return self.pixels()
 
@@ -293,11 +352,16 @@ class cckkImage:
         viewer_imgA = [self._viewer_fill] * (self._viewer_cols * self._viewer_rows)
         for row in range(self._viewer_rows):
             for col in range(self._viewer_cols):
-                col_img = col - self._img_xpos
-                row_img = row - self._img_ypos
+                col_img = col - self.xpos
+                row_img = row - self.ypos
                 if (col_img >= 0 and col_img < self.xcols and row_img >= 0 and row_img < self.yrows):
                     viewer_imgA[row*self._viewer_rows + col] = self._imgAA[row_img][col_img]
         return viewer_imgA
+
+    def update_size(self):
+        """Update the image size"""
+        self._rect.xcols = len(self._imgAA[0])
+        self._rect.yrows = len(self._imgAA)
 
     @property
     def image(self):
@@ -305,30 +369,30 @@ class cckkImage:
         return copy.deepcopy(self._imgAA)
 
     @property
-    def yrows(self):
-        """No. of rows in the image"""
-        return len(self._imgAA)
-
-    @property
     def xcols(self):
         """No. of columns in the image"""
-        return len(self._imgAA[0])
+        return self._rect._xcols
+
+    @property
+    def yrows(self):
+        """No. of rows in the image"""
+        return self._rect.yrows
 
     @property
     def xpos(self):
-        return self._img_xpos
+        return self._rect.xpos
 
     @xpos.setter
     def xpos(self, value):
-        self._img_xpos = value
+        self._rect.xpos = value
 
     @property
     def ypos(self):
-        return self._img_ypos
+        return self._rect.ypos
 
     @ypos.setter
     def ypos(self, value):
-        self._img_ypos = value
+        self._rect.ypos = value
 
     def move(self, dx, dy, keep = False):
         """Move the image (relative to the viewer)
@@ -341,18 +405,18 @@ class cckkImage:
         Returns:
         View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
         """
-        self._img_xpos += dx
-        self._img_ypos += dy
+        self.xpos += dx
+        self.ypos += dy
 
         if keep:
-            if self._img_xpos < 0:
-                self._img_xpos = 0
-            if self._img_ypos < 0:
-                self._img_ypos = 0
-            if self._img_xpos + self.xcols > self._viewer_cols:
-                self._img_xpos = self._viewer_cols - self.xcols
-            if self._img_ypos + self.yrows > self._viewer_rows:
-                self._img_ypos = self._viewer_rows - self.yrows
+            if self.xpos < 0:
+                self.xpos = 0
+            if self.ypos < 0:
+                self.ypos = 0
+            if self.xpos + self.xcols > self._viewer_cols:
+                self.xpos = self._viewer_cols - self.xcols
+            if self.ypos + self.yrows > self._viewer_rows:
+                self.ypos = self._viewer_rows - self.yrows
         return self
         
     def roll(self, dx, dy):
@@ -368,7 +432,8 @@ class cckkImage:
         return self
 
     def str(self):
-        as_str = "cckkImage: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
+        as_str = "cckkImage:\n"
+        str += "  " + self._rect.str() + "\n"
         for row in self._imgAA:
             for pixel in row:
                 as_str += str(pixel) + " "
