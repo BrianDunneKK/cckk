@@ -35,12 +35,12 @@ class cckkViewer:
     @property
     def xcols(self):
         """No. of columns in the image"""
-        return len(self._xcols)
+        return self._xcols
     
     @property
     def yrows(self):
         """No. of rows in the image"""
-        return len(self._yrows)
+        return self._yrows
 
     @property
     def xpos(self):
@@ -108,6 +108,7 @@ class cckkViewer:
 
     def calculate_mer(self):
         """Calculate the minimum enclosing rectangle of the images"""
+        self._mer_xpos = self._mer_ypos = self._mer_xcols = self._mer_yrows = 0
         if len(self._images) > 0:
             min_xpos = min([img.xpos for img in self._images])
             min_ypos = min([img.ypos for img in self._images])
