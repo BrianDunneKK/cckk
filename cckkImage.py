@@ -95,18 +95,14 @@ class cckkViewer:
         viewer_viewA = self.background
 
         for img in self._images:
-            for row in range(self.yrows):
-                for col in range(self.xcols):
-                    col_img = self.xpos + col - img.xpos
-                    row_img = self.ypos + row - img.ypos
-                    if (col_img >= 0 and col_img < img.xcols and row_img >= 0 and row_img < img.yrows):
-                        viewer_viewA[row*self.yrows + col] = img.image[row_img][col_img]
+            for yrow in range(self.yrows):
+                for xcol in range(self.xcols):
+                    xcol_img = self.xpos + xcol - img.xpos
+                    yrow_img = self.ypos + yrow - img.ypos
+                    if (xcol_img >= 0 and xcol_img < img.xcols and yrow_img >= 0 and yrow_img < img.yrows):
+                        viewer_viewA[yrow*self.yrows + xcol] = img.image[yrow_img][xcol_img]
 
         return viewer_viewA
-
-
-        #viewer_imgA = [self._fill] * (self._xcols * self._yrows)
-        return None
 
     def calculate_mer(self):
         """Calculate the minimum enclosing rectangle of the images"""
@@ -274,7 +270,7 @@ class cckkImage:
 
     @property
     def image(self):
-        """Copy fo the full image"""
+        """Copy of the full image"""
         return copy.deepcopy(self._imgAA)
 
     @property
@@ -326,8 +322,7 @@ class cckkImage:
                 self._img_xpos = self._viewer_cols - self.xcols
             if self._img_ypos + self.yrows > self._viewer_rows:
                 self._img_ypos = self._viewer_rows - self.yrows
-
-        return self.pixels()
+        return self
         
     def roll(self, dx, dy):
         result = []
@@ -339,10 +334,7 @@ class cckkImage:
                 new_row.append(self._imgAA[new_r][new_c])
             result.append(new_row)
         self._imgAA = result
-        return self.pixels()
-
-    def imgPrint(self):
-        print(self.str())
+        return self
 
     def str(self):
         str = "cckkImage: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
