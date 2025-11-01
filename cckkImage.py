@@ -1,3 +1,157 @@
+class cckkViewer:
+    def __init__(self, xcols = 8, yrows = 8, xpos = 0, ypos = 0, fill = [0,0,0], images = []):
+        """Contructs a cckkViewer object.
+        The viewer represents the view area through which an image is seen. This view can be displayed on a SenseHat LED matrix.
+
+        Args:
+        xcols: Number of columns in the viewer
+        yrows: Number of rows in the viewer
+        xpos: X-position of the viewer
+        ypos: Y-position of the viewer
+        fill: Fill colour if the image does not fill the viewer
+        images: List of cckkImage objects that are viewed through the viewer, First image in the list is at the *front*, last image is at the back.
+
+        Returns:
+        cckkViewer  object
+
+        Raises:
+        Exception: Never
+        """
+
+        # Assign default values
+        self._xcols = xcols # No. of columns in the viewer
+        self._yrows = yrows # No. of rows in the viewer
+        self._xpos = xpos   # X-position of the viewer
+        self._ypos = ypos   # Y-position of the viewer
+        self._fill = fill   # Fill colour if the image does not fill the viewer
+        self._mer_xpos = 0  # X-position of the minimum enclosing rectangle of the images
+        self._mer_ypos = 0  # Y-position of the minimum enclosing rectangle of the images
+        self._mer_xcols = 0 # No. of columns in the minimum enclosing rectangle of the images
+        self._mer_yrows = 0 # No. of rows in the minimum enclosing rectangle of the images
+        self._images = [] # List of cckkImage objects that are viewed through the viewer. First image in the list is at the *back*.
+
+        self.add_images(images)
+
+    @property
+    def xcols(self):
+        """No. of columns in the image"""
+        return len(self._xcols)
+    
+    @property
+    def yrows(self):
+        """No. of rows in the image"""
+        return len(self._yrows)
+
+    @property
+    def xpos(self):
+        return self._xpos
+
+    @xpos.setter
+    def xpos(self, value):
+        self._xpos = value
+
+    @property
+    def ypos(self):
+        return self._ypos
+
+    @xpos.setter
+    def ypos(self, value):
+        self._ypos = value
+
+    @property
+    def background(self):
+        return [self._fill] * (self.xcols * self.yrows)
+    
+    def add_images(self, images):
+        """Add images to the viewer
+
+        Args:
+        images: List of cckkImage objects to view through the viewer. These are added on top of any existing images.  
+        
+        Returns:
+        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat.
+        
+        Raises:
+        Exception: If invalid image specified
+        """
+
+        for img in images.reverse():
+            if not isinstance(img, cckkImage):
+                raise Exception("Invalid image specified")
+            self._images.append(img)
+
+        self.calculate_mer()
+
+        return self.view()
+
+    def view(self):
+        """View of the images through the viewer
+
+        Returns:
+        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+        """
+        viewer_viewA = self.background
+
+        for img in self._images:
+            for row in range(self.yrows):
+                for col in range(self.xcols):
+                    col_img = self.xpos + col - img.xpos
+                    row_img = self.ypos + row - img.ypos
+                    if (col_img >= 0 and col_img < img.xcols and row_img >= 0 and row_img < img.yrows):
+                        viewer_viewA[row*self.yrows + col] = img.image[row_img][col_img]
+
+        return viewer_viewA
+
+
+        #viewer_imgA = [self._fill] * (self._xcols * self._yrows)
+        return None
+
+    def calculate_mer(self):
+        """Calculate the minimum enclosing rectangle of the images"""
+        if len(self._images) > 0:
+            min_xpos = min([img.xpos for img in self._images])
+            min_ypos = min([img.ypos for img in self._images])
+            max_xpos = max([img.xpos + img.xcols for img in self._images])
+            max_ypos = max([img.ypos + img.yrows for img in self._images])
+            self._mer_xpos = min_xpos
+            self._mer_ypos = min_ypos
+            self._mer_xcols = max_xpos - min_xpos
+            self._mer_yrows = max_ypos - min_ypos
+
+        def move(self, dx, dy, keep = False):
+            """Move the viewer
+
+            Args:
+            dx: Change in x-position
+            dy: Change in y-position
+            keep: If True, keeps the cammera over the MER of the images
+
+            Returns:
+            View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+            """
+            self.xpos = self.xpos + dx
+            self.ypos = self.ypos + dy
+
+            if keep:
+                # Test bottom-right first so that top-left correction is not overridden
+                if self.xpos + self.xcols < self._mer_xpos + self._mer_xcols:
+                    self.xpos = self._mer_xpos + self._mer_xcols - self.xcols
+                if self.ypos + self.yrows < self._mer_ypos + self._mer_yrows:
+                    self.ypos = self._mer_ypos + self._mer_yrows - self.y
+                if self.xpos < self._mer_xpos:
+                    self.xpos = self._mer_xpos
+                if self.ypos < self._mer_ypos:
+                    self.ypos = self._mer_ypos
+                    
+            return self.view()
+        
+
+    def str(self):
+        str = "cckkViewer: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
+        str += "  MER: " + str(self._mer_xcols) + " x " + str(self._mer_yrows) + " at (" + str(self._mer_xpos) + "," + str(self._mer_ypos) + ")\n"
+        str += "  Images: " + str(len(self._images)) + "\n"
+        return str
+
 class cckkImage:
     """Class representation of an image on a SenseHat"""
     def_colour_dict = {
@@ -19,56 +173,60 @@ class cckkImage:
         , 's': (192,192,192) # Silver
         }
 
-    def __init__(self, imgA = None, imgStr = None, img_cols = 8, camera_cols = 8, camera_rows = 8, camera_horiz = "C", camera_vert = "C", camera_fill = [0,0,0]):
+    def __init__(self, imgA = None, imgStr = None, img_cols = 8, viewer_cols = 8, viewer_rows = 8, viewer_horiz = "C", viewer_vert = "C", viewer_fill = [0,0,0]):
         """Contructs a cckkImage object
 
         Args:
-        imgA: One-dimensional array of colours elements. Each colour element is a list containing [R, G, B] (red, green, blue). Each R-G-B element must be an integer between 0 and 255.
+        imgA: One-dimensional array of image pixels. Each pixel is a list containing [R, G, B] (red, green, blue). Each R-G-B element must be an integer between 0 and 255.
         img_cols: Number of columns in the image
-        camera_cols: Number of columns in the camera
-        camera_rows: Number of rows in the camera
-        camera_horiz: Camera horizontal alignment relative to image.  Contains "L", "C" or "R" (left, centre, right)
-        camera_vert: Camera vertical alignment relative to image. Contains "T", "C" or "B" (top, centre, bottom)
-        camera_fill: Fill colour if the image does not fill the camera
+        viewer_cols: Number of columns in the viewer
+        viewer_rows: Number of rows in the viewer
+        viewer_horiz: Viewer horizontal alignment relative to image.  Contains "L", "C" or "R" (left, centre, right)
+        viewer_vert: Viewer vertical alignment relative to image. Contains "T", "C" or "B" (top, centre, bottom)
+        viewer_fill: Fill colour if the image does not fill the viewer
 
         Returns:
-        cckImage object
+        cckkImage object
 
         Raises:
         Exception: If invalid image specified
         """
 
         # Assign default values
-        self._imgAA = None
-        self._img_xpos = 0    # X-position of the image relative to the camera
-        self._img_ypos = 0    # Y-position of the image relative to the camera
-        self._camera_cols = 0 # Number of columns in the camera
-        self._camera_rows = 0 # Number of rows in the camera
-        self._camera_fill = None # Fill colour if the image does not fill the camera. Default: [0,0,0] (black)
+        self._imgAA = None    # Two-dimensional array of image pixels
+        self._img_xpos = 0    # X-position of the image relative to the viewer
+        self._img_ypos = 0    # Y-position of the image relative to the viewer
+        self._viewer_cols = 0 # Number of columns in the viewer
+        self._viewer_rows = 0 # Number of rows in the viewer
+        self._viewer_fill = None # Fill colour if the image does not fill the viewer. Default: [0,0,0] (black)
 
 
-        self._camera_cols = camera_cols
-        self._camera_rows = camera_rows
-        self._camera_fill = camera_fill
+        self._viewer_cols = viewer_cols
+        self._viewer_rows = viewer_rows
+        self._viewer_fill = viewer_fill
 
         if (imgA is not None):
-            self.setFromArray(imgA, img_cols, camera_horiz, camera_vert)
+            self.setFromArray(imgA, img_cols, viewer_horiz, viewer_vert)
         elif (imgStr is not None):
-            self.setFromString(imgStr, None, camera_horiz, camera_vert)
+            self.setFromString(imgStr, None, viewer_horiz, viewer_vert)
 
-    def setFromArray(self, imgA, img_cols = 8, camera_horiz = "C", camera_vert = "C"):
+    def setFromArray(self, imgA, img_cols = 8, viewer_horiz = "C", viewer_vert = "C"):
         self._imgAA = [imgA[i:i+img_cols] for i in range(0, len(imgA), img_cols)]
-        self.align_image(camera_horiz, camera_vert)
+        self.align_image(viewer_horiz, viewer_vert)
         return self.pixels()
 
-    def setFromString(self, imgStr, colour_dict = None, camera_horiz = "C", camera_vert = "C"):
+    def setFromString(self, imgStr, colour_dict = None, viewer_horiz = "C", viewer_vert = "C"):
         if (colour_dict is None):
             colour_dict = cckkImage.def_colour_dict
 
         self._imgAA = []
         img_lines = imgStr.splitlines()
-        if (img_lines[0].strip() == ""):
+
+        # Remove leading/trailing blank lines
+        if (img_lines[0].strip() == ""): 
             img_lines = img_lines[1:]
+        if (img_lines[-1].strip() == ""):
+            img_lines = img_lines[:-1]
 
         for img_line in img_lines:
             line_pixels = []
@@ -79,45 +237,50 @@ class cckkImage:
                     raise Exception("Invalid colour character '" + ch + "' in image string")
             self._imgAA.append(line_pixels)
 
-        self.align_image(camera_horiz, camera_vert)
+        self.align_image(viewer_horiz, viewer_vert)
 
         return self.pixels()
 
-    def align_image(self, camera_horiz = "C", camera_vert = "C"):
-        if camera_horiz.upper() == "L":
+    def align_image(self, viewer_horiz = "C", viewer_vert = "C"):
+        if viewer_horiz.upper() == "L":
             self._img_xpos = 0
-        elif camera_horiz.upper() == "R":
-            self._img_xpos = self._camera_cols - self.img_cols
+        elif viewer_horiz.upper() == "R":
+            self._img_xpos = self._viewer_cols - self.xcols
         else:
-            self._img_xpos = int((self._camera_cols - self.img_cols)/2)
+            self._img_xpos = int((self._viewer_cols - self.xcols)/2)
         
-        if camera_vert.upper() == "T":
+        if viewer_vert.upper() == "T":
             self._img_ypos = 0
-        elif camera_vert.upper() == "B":
-            self._img_ypos = self._camera_rows - self.img_rows
+        elif viewer_vert.upper() == "B":
+            self._img_ypos = self._viewer_rows - self.yrows
         else:
-            self._img_ypos = int((self._camera_rows - self.img_rows)/2)
+            self._img_ypos = int((self._viewer_rows - self.yrows)/2)
 
         return self.pixels()
 
     def pixels(self):
-        """Image as seen through the camera"""
-        camera_imgA = [self._camera_fill] * (self._camera_cols * self._camera_rows)
-        for row in range(self._camera_rows):
-            for col in range(self._camera_cols):
+        """Image as seen through the viewer"""
+        viewer_imgA = [self._viewer_fill] * (self._viewer_cols * self._viewer_rows)
+        for row in range(self._viewer_rows):
+            for col in range(self._viewer_cols):
                 col_img = col - self._img_xpos
                 row_img = row - self._img_ypos
-                if (col_img >= 0 and col_img < self.img_cols and row_img >= 0 and row_img < self.img_rows):
-                    camera_imgA[row*self._camera_rows + col] = self._imgAA[row_img][col_img]
-        return camera_imgA
+                if (col_img >= 0 and col_img < self.xcols and row_img >= 0 and row_img < self.yrows):
+                    viewer_imgA[row*self._viewer_rows + col] = self._imgAA[row_img][col_img]
+        return viewer_imgA
 
     @property
-    def img_rows(self):
+    def image(self):
+        """Copy fo the full image"""
+        return self._imgAA.deepcopy()
+
+    @property
+    def yrows(self):
         """No. of rows in the image"""
         return len(self._imgAA)
 
     @property
-    def img_cols(self):
+    def xcols(self):
         """No. of columns in the image"""
         return len(self._imgAA[0])
 
@@ -138,15 +301,15 @@ class cckkImage:
         self._img_ypos = value
 
     def move(self, dx, dy, keep = False):
-        """Move the image (relative to the camera)
+        """Move the image (relative to the viewer)
 
         Args:
         dx: Change in x-position
         dy: Change in y-position
-        keep: If True, keeps the image fully within the camera view
+        keep: If True, keeps the image fully within the viewer view
 
         Returns:
-        View of the image through the camera as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
         """
         self._img_xpos += dx
         self._img_ypos += dy
@@ -156,29 +319,33 @@ class cckkImage:
                 self._img_xpos = 0
             if self._img_ypos < 0:
                 self._img_ypos = 0
-            if self._img_xpos + self.img_cols > self._camera_cols:
-                self._img_xpos = self._camera_cols - self.img_cols
-            if self._img_ypos + self.img_rows > self._camera_rows:
-                self._img_ypos = self._camera_rows - self.img_rows
+            if self._img_xpos + self.xcols > self._viewer_cols:
+                self._img_xpos = self._viewer_cols - self.xcols
+            if self._img_ypos + self.yrows > self._viewer_rows:
+                self._img_ypos = self._viewer_rows - self.yrows
 
         return self.pixels()
         
     def roll(self, dx, dy):
         result = []
-        for r in range(self.img_rows):
-            new_r = (r - dy + self.img_rows) % self.img_rows
+        for r in range(self.yrows):
+            new_r = (r - dy + self.yrows) % self.yrows
             new_row = []
-            for c in range(self.img_cols):
-                new_c = (c - dx + self.img_cols) % self.img_cols
+            for c in range(self.xcols):
+                new_c = (c - dx + self.xcols) % self.xcols
                 new_row.append(self._imgAA[new_r][new_c])
             result.append(new_row)
         self._imgAA = result
         return self.pixels()
 
     def imgPrint(self):
-        str = ""
+        print(self.str())
+
+    def str(self):
+        str = "cckkImage: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
         for row in self._imgAA:
             for pixel in row:
-                str += pixel + " "
+                str += str(pixel) + " "
             str += "\n"
-        print(str)
+        return str
+    
