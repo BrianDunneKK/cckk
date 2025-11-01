@@ -56,7 +56,7 @@ class cckkViewer:
     def ypos(self):
         return self._ypos
 
-    @xpos.setter
+    @ypos.setter
     def ypos(self, value):
         self._ypos = value
 
@@ -70,9 +70,6 @@ class cckkViewer:
         Args:
         images: List of cckkImage objects to view through the viewer. These are added on top of any existing images.  
         
-        Returns:
-        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat.
-        
         Raises:
         Exception: If invalid image specified
         """
@@ -84,7 +81,41 @@ class cckkViewer:
 
         self.calculate_mer()
 
-        return self.view()
+        return self
+
+    def align_viewer(self, horiz = "C", vert = "C", img_idx = 0):
+        """Align the viewer relative to an image
+        Args:
+        horiz: Viewer horizontal alignment relative to selected image.  Contains "L", "C" or "R" (left, centre, right)
+        vert: Viewer vertical alignment relative to selected image. Contains "T", "C" or "B" (top, centre, bottom)
+        img_idx: Index of the image in the viewer's image list to align the viewer to. Default: 0 (top image)
+
+        Returns:
+        cckkViewer object
+        
+        Raises:
+        Exception: If no images in viewer or invalid image index specified
+        """
+        if len(self._images) == 0 or img_idx < 0 or img_idx >= len(self._images):
+            raise Exception("No images in viewer or invalid image index specified")
+        
+        img = self._images[img_idx]
+
+        if horiz.upper() == "L":
+            self.xpos = img.xpos
+        elif horiz.upper() == "R":
+            self.xpos = img.xpos + img.xcols - self.xcols
+        else:
+            self.xpos = img.xpos + int((img.xcols - self.xcols)/2)
+        
+        if vert.upper() == "T":
+            self.ypos = img.ypos
+        elif vert.upper() == "B":
+            self.ypos = img.ypos + img.yrows - self.yrows
+        else:
+            self.ypos = img.ypos + int((img.yrows - self.yrows)/2)
+
+        return self
 
     def view(self):
         """View of the images through the viewer
@@ -212,7 +243,7 @@ class cckkImage:
     def setFromArray(self, imgA, img_cols = 8, viewer_horiz = "C", viewer_vert = "C"):
         self._imgAA = [imgA[i:i+img_cols] for i in range(0, len(imgA), img_cols)]
         self.align_image(viewer_horiz, viewer_vert)
-        return self.pixels()
+        return self
 
     def setFromString(self, imgStr, colour_dict = None, viewer_horiz = "C", viewer_vert = "C"):
         if (colour_dict is None):
@@ -238,7 +269,7 @@ class cckkImage:
 
         self.align_image(viewer_horiz, viewer_vert)
 
-        return self.pixels()
+        return self
 
     def align_image(self, viewer_horiz = "C", viewer_vert = "C"):
         if viewer_horiz.upper() == "L":
