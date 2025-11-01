@@ -337,10 +337,10 @@ class cckkImage:
         return self
 
     def str(self):
-        str = "cckkImage: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
+        as_str = "cckkImage: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
         for row in self._imgAA:
             for pixel in row:
-                str += str(pixel) + " "
-            str += "\n"
-        return str
+                as_str += str(pixel) + " "
+            as_str += "\n"
+        return as_str
     
