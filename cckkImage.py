@@ -299,7 +299,6 @@ class cckkImage:
 
     def setFromArray(self, imgA, img_cols = 8, viewer_horiz = "C", viewer_vert = "C"):
         self._imgAA = [imgA[i:i+img_cols] for i in range(0, len(imgA), img_cols)]
-        self.align_image(viewer_horiz, viewer_vert)
         self.update_size()
         return self
 
@@ -326,8 +325,6 @@ class cckkImage:
             self._imgAA.append(line_pixels)
 
         self.update_size()
-        self.align_image(viewer_horiz, viewer_vert)
-
         return self
 
     def align_image(self, viewer_horiz = "C", viewer_vert = "C"):
