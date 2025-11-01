@@ -74,14 +74,14 @@ class cckkViewer:
         images: List of cckkImage objects that are viewed through the viewer, First image in the list is at the *front*, last image is at the back.
 
         Returns:
-        cckkViewer  object
+        cckkViewer object
 
         Raises:
         Exception: Never
         """
 
         # Assign default values
-        self._rect = cckkRectangle(xcols, yrows, xpos, ypos)
+        self._rect = cckkRectangle(xcols, yrows, xpos, ypos) # Rectangle representing the viewer size and position
         self._fill = fill   # Fill colour if the image does not fill the viewer
         self._mer_xpos = 0  # X-position of the minimum enclosing rectangle of the images
         self._mer_ypos = 0  # Y-position of the minimum enclosing rectangle of the images
@@ -91,6 +91,11 @@ class cckkViewer:
 
         self.add_images(images)
 
+    @property
+    def rect(self):
+        """Rectangle representing the viewer size and position"""
+        return self._rect
+    
     @property
     def xcols(self):
         """No. of columns in the image"""
@@ -140,12 +145,12 @@ class cckkViewer:
 
         return self
 
-    def align_viewer(self, horiz = "C", vert = "C", img_idx = 0):
+    def align_viewer(self, img_idx = 0, horiz = "C", vert = "C"):
         """Align the viewer relative to an image
         Args:
+        img_idx: Index of the image in the viewer's image list to align the viewer to. Default: 0 (top image)
         horiz: Viewer horizontal alignment relative to selected image.  Contains "L", "C" or "R" (left, centre, right)
         vert: Viewer vertical alignment relative to selected image. Contains "T", "C" or "B" (top, centre, bottom)
-        img_idx: Index of the image in the viewer's image list to align the viewer to. Default: 0 (top image)
 
         Returns:
         cckkViewer object
@@ -261,17 +266,12 @@ class cckkImage:
         , 's': (192,192,192) # Silver
         }
 
-    def __init__(self, imgA = None, imgStr = None, img_cols = 8, viewer_cols = 8, viewer_rows = 8, viewer_horiz = "C", viewer_vert = "C", viewer_fill = [0,0,0]):
+    def __init__(self, imgA = None, imgStr = None, img_cols = 8):
         """Contructs a cckkImage object
 
         Args:
         imgA: One-dimensional array of image pixels. Each pixel is a list containing [R, G, B] (red, green, blue). Each R-G-B element must be an integer between 0 and 255.
         img_cols: Number of columns in the image
-        viewer_cols: Number of columns in the viewer
-        viewer_rows: Number of rows in the viewer
-        viewer_horiz: Viewer horizontal alignment relative to image.  Contains "L", "C" or "R" (left, centre, right)
-        viewer_vert: Viewer vertical alignment relative to image. Contains "T", "C" or "B" (top, centre, bottom)
-        viewer_fill: Fill colour if the image does not fill the viewer
 
         Returns:
         cckkImage object
@@ -284,25 +284,17 @@ class cckkImage:
         self._imgAA = None    # Two-dimensional array of image pixels
         self._rect = cckkRectangle(0, 0, 0, 0) # Rectangle representing the image size and position
 
-        self._viewer_cols = 0 # Number of columns in the viewer
-        self._viewer_rows = 0 # Number of rows in the viewer
-        self._viewer_fill = None # Fill colour if the image does not fill the viewer. Default: [0,0,0] (black)
-
-        self._viewer_cols = viewer_cols
-        self._viewer_rows = viewer_rows
-        self._viewer_fill = viewer_fill
-
         if (imgA is not None):
-            self.setFromArray(imgA, img_cols, viewer_horiz, viewer_vert)
+            self.setFromArray(imgA, img_cols)
         elif (imgStr is not None):
-            self.setFromString(imgStr, None, viewer_horiz, viewer_vert)
+            self.setFromString(imgStr, None)
 
-    def setFromArray(self, imgA, img_cols = 8, viewer_horiz = "C", viewer_vert = "C"):
+    def setFromArray(self, imgA, img_cols = 8):
         self._imgAA = [imgA[i:i+img_cols] for i in range(0, len(imgA), img_cols)]
         self.update_size()
         return self
 
-    def setFromString(self, imgStr, colour_dict = None, viewer_horiz = "C", viewer_vert = "C"):
+    def setFromString(self, imgStr, colour_dict = None):
         if (colour_dict is None):
             colour_dict = cckkImage.def_colour_dict
 
@@ -327,33 +319,22 @@ class cckkImage:
         self.update_size()
         return self
 
-    def align_image(self, viewer_horiz = "C", viewer_vert = "C"):
-        if viewer_horiz.upper() == "L":
-            self.xpos = 0
-        elif viewer_horiz.upper() == "R":
-            self.xpos = self._viewer_cols - self.xcols
+    def align_image(self, viewer_rect, horiz = "C", vert = "C"):
+        if horiz.upper() == "L":
+            self.xpos = viewer_rect.xpos
+        elif horiz.upper() == "R":
+            self.xpos = viewer_rect.xpos + viewer_rect.xcols - self.xcols
         else:
-            self.xpos = int((self._viewer_cols - self.xcols)/2)
+            self.xpos = viewer_rect.xpos + int((viewer_rect.xcols - self.xcols)/2)
         
-        if viewer_vert.upper() == "T":
-            self.ypos = 0
-        elif viewer_vert.upper() == "B":
-            self.ypos = self._viewer_rows - self.yrows
+        if vert.upper() == "T":
+            self.ypos = viewer_rect.ypos
+        elif vert.upper() == "B":
+            self.ypos = viewer_rect.ypos + viewer_rect.yrows - self.yrows
         else:
-            self.ypos = int((self._viewer_rows - self.yrows)/2)
+            self.ypos = viewer_rect.ypos + int((viewer_rect.yrows - self.yrows)/2)
 
-        return self.pixels()
-
-    def pixels(self):
-        """Image as seen through the viewer"""
-        viewer_imgA = [self._viewer_fill] * (self._viewer_cols * self._viewer_rows)
-        for row in range(self._viewer_rows):
-            for col in range(self._viewer_cols):
-                col_img = col - self.xpos
-                row_img = row - self.ypos
-                if (col_img >= 0 and col_img < self.xcols and row_img >= 0 and row_img < self.yrows):
-                    viewer_imgA[row*self._viewer_rows + col] = self._imgAA[row_img][col_img]
-        return viewer_imgA
+        return self
 
     def update_size(self):
         """Update the image size"""
@@ -365,6 +346,11 @@ class cckkImage:
         """Copy of the full image"""
         return copy.deepcopy(self._imgAA)
 
+    @property
+    def rect(self):
+        """Rectangle representing the image size and position"""
+        return self._rect
+    
     @property
     def xcols(self):
         """No. of columns in the image"""
@@ -391,29 +377,30 @@ class cckkImage:
     def ypos(self, value):
         self._rect.ypos = value
 
-    def move(self, dx, dy, keep = False):
+    def move(self, dx, dy, keep_rect = None):
         """Move the image (relative to the viewer)
 
         Args:
         dx: Change in x-position
         dy: Change in y-position
-        keep: If True, keeps the image fully within the viewer view
+        keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
 
         Returns:
-        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+        cckkImage object
         """
         self.xpos += dx
         self.ypos += dy
 
-        if keep:
-            if self.xpos < 0:
-                self.xpos = 0
-            if self.ypos < 0:
-                self.ypos = 0
-            if self.xpos + self.xcols > self._viewer_cols:
-                self.xpos = self._viewer_cols - self.xcols
-            if self.ypos + self.yrows > self._viewer_rows:
-                self.ypos = self._viewer_rows - self.yrows
+        if keep_rect is not None:
+            if self.xpos < keep_rect.xpos:
+                self.xpos = keep_rect.xpos
+            if self.ypos < keep_rect.ypos:
+                self.ypos = keep_rect.ypos
+            if self.xpos + self.xcols > keep_rect.xpos + keep_rect.xcols:
+                self.xpos = keep_rect.xpos + keep_rect.xcols - self.xcols
+            if self.ypos + self.yrows > keep_rect.ypos + keep_rect.yrows:
+                self.ypos = keep_rect.ypos + keep_rect.yrows - self.yrows
+
         return self
         
     def roll(self, dx, dy):
