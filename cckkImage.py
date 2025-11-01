@@ -1,3 +1,5 @@
+import copy
+
 class cckkViewer:
     def __init__(self, xcols = 8, yrows = 8, xpos = 0, ypos = 0, fill = [0,0,0], images = []):
         """Contructs a cckkViewer object.
@@ -273,7 +275,7 @@ class cckkImage:
     @property
     def image(self):
         """Copy fo the full image"""
-        return self._imgAA.deepcopy()
+        return copy.deepcopy(self._imgAA)
 
     @property
     def yrows(self):
