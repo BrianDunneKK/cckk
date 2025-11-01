@@ -62,7 +62,7 @@ class cckkViewer:
     def background(self):
         return [self._fill] * (self.xcols * self.yrows)
     
-    def add_images(self, images):
+    def add_images(self, images = []):
         """Add images to the viewer
 
         Args:
@@ -75,7 +75,7 @@ class cckkViewer:
         Exception: If invalid image specified
         """
 
-        for img in images.reverse():
+        for img in reversed(images):
             if not isinstance(img, cckkImage):
                 raise Exception("Invalid image specified")
             self._images.append(img)
