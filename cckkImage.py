@@ -16,12 +16,14 @@ class cckkRectangle:
         Raises:
         Exception: Never
         """
-        # Assign default values
+        self.set(xcols, yrows, xpos, ypos)
+
+    def set(self, xcols = 0, yrows = 0, xpos = 0, ypos = 0):
         self._xcols = xcols # No. of columns in the rectangle
         self._yrows = yrows # No. of rows in the rectangle
         self._xpos = xpos   # X-position of the rectangle
         self._ypos = ypos   # Y-position of the rectangle
-
+    
     @property
     def xcols(self):
         """No. of columns in the rectangle"""
@@ -56,6 +58,27 @@ class cckkRectangle:
     def ypos(self, value):
         self._ypos = value
 
+    def keep_within(self, outer_rect):
+        """Adjust the rectangle position to keep it fully within another rectangle
+
+        Args:
+        outer_rect: cckkRectangle object representing the outer rectangle
+
+        Returns:
+        cckkRectangle object
+        """
+        if self.xpos + self.xcols > outer_rect.xpos + outer_rect.xcols:
+            self.xpos = outer_rect.xpos + outer_rect.xcols - self.xcols
+        if self.ypos + self.yrows > outer_rect.ypos + outer_rect.yrows:
+            self.ypos = outer_rect.ypos + outer_rect.yrows - self.yrows
+        if self.xpos < outer_rect.xpos:
+            self.xpos = outer_rect.xpos
+        if self.ypos < outer_rect.ypos:
+            self.ypos = outer_rect.ypos
+
+        return self
+    
+
     def str(self):  
         return "cckkRectangle: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
 
@@ -83,10 +106,7 @@ class cckkViewer:
         # Assign default values
         self._rect = cckkRectangle(xcols, yrows, xpos, ypos) # Rectangle representing the viewer size and position
         self._fill = fill   # Fill colour if the image does not fill the viewer
-        self._mer_xpos = 0  # X-position of the minimum enclosing rectangle of the images
-        self._mer_ypos = 0  # Y-position of the minimum enclosing rectangle of the images
-        self._mer_xcols = 0 # No. of columns in the minimum enclosing rectangle of the images
-        self._mer_yrows = 0 # No. of rows in the minimum enclosing rectangle of the images
+        self._mer_rect = cckkRectangle() # Minimum enclosing rectangle of the images
         self._images = [] # List of cckkImage objects that are viewed through the viewer. First image in the list is at the *back*.
 
         self.add_images(images)
@@ -199,51 +219,54 @@ class cckkViewer:
 
     def calculate_mer(self):
         """Calculate the minimum enclosing rectangle of the images"""
-        self._mer_xpos = self._mer_ypos = self._mer_xcols = self._mer_yrows = 0
+        self._mer_rect.set()
         if len(self._images) > 0:
             min_xpos = min([img.xpos for img in self._images])
             min_ypos = min([img.ypos for img in self._images])
             max_xpos = max([img.xpos + img.xcols for img in self._images])
             max_ypos = max([img.ypos + img.yrows for img in self._images])
-            self._mer_xpos = min_xpos
-            self._mer_ypos = min_ypos
-            self._mer_xcols = max_xpos - min_xpos
-            self._mer_yrows = max_ypos - min_ypos
+            self._mer_rect.set(
+                xcols = max_xpos - min_xpos,
+                yrows = max_ypos - min_ypos,
+                xpos = min_xpos,
+                ypos = min_ypos
+            )
 
-        def move(self, dx, dy, keep = False):
-            """Move the viewer
+    def move(self, dx, dy, keep = False):
+        """Move the viewer
 
-            Args:
-            dx: Change in x-position
-            dy: Change in y-position
-            keep: If True, keeps the cammera over the MER of the images
+        Args:
+        dx: Change in x-position
+        dy: Change in y-position
+        keep: If True, keeps the cammera over the MER of the images
 
-            Returns:
-            View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
-            """
-            self.xpos = self.xpos + dx
-            self.ypos = self.ypos + dy
+        Returns:
+        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+        """
+        self.xpos = self.xpos + dx
+        self.ypos = self.ypos + dy
 
-            if keep:
-                # Test bottom-right first so that top-left correction is not overridden
-                if self.xpos + self.xcols < self._mer_xpos + self._mer_xcols:
-                    self.xpos = self._mer_xpos + self._mer_xcols - self.xcols
-                if self.ypos + self.yrows < self._mer_ypos + self._mer_yrows:
-                    self.ypos = self._mer_ypos + self._mer_yrows - self.y
-                if self.xpos < self._mer_xpos:
-                    self.xpos = self._mer_xpos
-                if self.ypos < self._mer_ypos:
-                    self.ypos = self._mer_ypos
-                    
-            return self.view()
+        if keep:
+            # Test bottom-right first so that top-left correction is not overridden
+            if self.xpos + self.xcols < self._mer_rect.xpos + self._mer_rect.xcols:
+                self.xpos = self._mer_rect.xpos + self._mer_rect.xcols - self.xcols
+            if self.ypos + self.yrows < self._mer_rect.ypos + self._mer_rect.yrows:
+                self.ypos = self._mer_rect.ypos + self._mer_rect.yrows - self.y
+            if self.xpos < self._mer_rect.xpos:
+                self.xpos = self._mer_rect.xpos
+            if self.ypos < self._mer_rect.ypos:
+                self.ypos = self._mer_rect.ypos
+                
+        return self.view()
         
     def str(self):
         str = "cckkViewer:\n"
         str += "  Fill: " + str(self._fill) + "\n"
         str += "  " + self._rect.str() + "\n"
-        str += "  MER: " + str(self._mer_xcols) + " x " + str(self._mer_yrows) + " at (" + str(self._mer_xpos) + "," + str(self._mer_ypos) + ")\n"
+        str += "  MER: " + self._mer_rect.str() + "\n"
         str += "  Images: " + str(len(self._images)) + "\n"
         return str
+
 
 class cckkImage:
     """Class representation of an image on a SenseHat"""
