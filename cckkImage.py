@@ -275,6 +275,12 @@ class cckkViewer:
             self._images[idx].move(dx, dy, self._mer_rect if keep else None)
         return self
     
+    def align_image(self, name, horiz = "C", vert = "C"):
+        idx = self.find_image(name)
+        if idx >= 0:
+            self._images[idx].align_image(self._rect, horiz, vert)
+        return self
+
     def str(self):
         str = "cckkViewer:\n"
         str += "  Fill: " + str(self._fill) + "\n"
