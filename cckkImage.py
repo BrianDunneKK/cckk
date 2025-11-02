@@ -3,6 +3,7 @@
 # 2. Move calculate_mer() to cckkRectangle   ## attributes = [node.attr for node in nodes]
 # 3. Add move_img() and align_img() to cckkViewer
 # 4. Intersection of rectangles function to cckkRectangle ... collision detection
+# 5. Rename align_viewer() and align_image() to align()
 
 import copy
 
@@ -168,7 +169,7 @@ class cckkViewer:
 
         return self
 
-    def align_viewer(self, img_idx = 0, horiz = "C", vert = "C"):
+    def align(self, img_name = "", horiz = "C", vert = "C"):
         """Align the viewer relative to an image
         Args:
         img_idx: Index of the image in the viewer's image list to align the viewer to. Default: 0 (top image)
@@ -181,6 +182,10 @@ class cckkViewer:
         Raises:
         Exception: If no images in viewer or invalid image index specified
         """
+        img_idx = self.find_image(img_name)
+        if img_idx < 0:
+            img_idx = 0
+
         if len(self._images) == 0 or img_idx < 0 or img_idx >= len(self._images):
             raise Exception("No images in viewer or invalid image index specified")
         
