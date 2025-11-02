@@ -58,7 +58,7 @@ class cckkRectangle:
     def ypos(self, value):
         self._ypos = value
 
-    def keep_within(self, outer_rect):
+    def keep_within(self, outer_rect = None):
         """Adjust the rectangle position to keep it fully within another rectangle.
         Test bottom-right first so that top-left correction is not overridden
 
@@ -68,14 +68,15 @@ class cckkRectangle:
         Returns:
         cckkRectangle object
         """
-        if self.xpos + self.xcols > outer_rect.xpos + outer_rect.xcols:
-            self.xpos = outer_rect.xpos + outer_rect.xcols - self.xcols
-        if self.ypos + self.yrows > outer_rect.ypos + outer_rect.yrows:
-            self.ypos = outer_rect.ypos + outer_rect.yrows - self.yrows
-        if self.xpos < outer_rect.xpos:
-            self.xpos = outer_rect.xpos
-        if self.ypos < outer_rect.ypos:
-            self.ypos = outer_rect.ypos
+        if outer_rect is not None:
+            if self.xpos + self.xcols > outer_rect.xpos + outer_rect.xcols:
+                self.xpos = outer_rect.xpos + outer_rect.xcols - self.xcols
+            if self.ypos + self.yrows > outer_rect.ypos + outer_rect.yrows:
+                self.ypos = outer_rect.ypos + outer_rect.yrows - self.yrows
+            if self.xpos < outer_rect.xpos:
+                self.xpos = outer_rect.xpos
+            if self.ypos < outer_rect.ypos:
+                self.ypos = outer_rect.ypos
 
         return self
     
