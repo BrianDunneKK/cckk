@@ -249,15 +249,17 @@ class cckkViewer:
         self.ypos = self.ypos + dy
 
         if keep:
+            self._rect.keep_within(self._mer_rect)
+
             # Test bottom-right first so that top-left correction is not overridden
-            if self.xpos + self.xcols < self._mer_rect.xpos + self._mer_rect.xcols:
-                self.xpos = self._mer_rect.xpos + self._mer_rect.xcols - self.xcols
-            if self.ypos + self.yrows < self._mer_rect.ypos + self._mer_rect.yrows:
-                self.ypos = self._mer_rect.ypos + self._mer_rect.yrows - self.y
-            if self.xpos < self._mer_rect.xpos:
-                self.xpos = self._mer_rect.xpos
-            if self.ypos < self._mer_rect.ypos:
-                self.ypos = self._mer_rect.ypos
+#            if self.xpos + self.xcols < self._mer_rect.xpos + self._mer_rect.xcols:
+#                self.xpos = self._mer_rect.xpos + self._mer_rect.xcols - self.xcols
+#            if self.ypos + self.yrows < self._mer_rect.ypos + self._mer_rect.yrows:
+#                self.ypos = self._mer_rect.ypos + self._mer_rect.yrows - self.yrows
+#            if self.xpos < self._mer_rect.xpos:
+#                self.xpos = self._mer_rect.xpos
+#            if self.ypos < self._mer_rect.ypos:
+#                self.ypos = self._mer_rect.ypos
                 
         return self.view()
         
