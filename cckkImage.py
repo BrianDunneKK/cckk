@@ -59,7 +59,8 @@ class cckkRectangle:
         self._ypos = value
 
     def keep_within(self, outer_rect):
-        """Adjust the rectangle position to keep it fully within another rectangle
+        """Adjust the rectangle position to keep it fully within another rectangle.
+        Test bottom-right first so that top-left correction is not overridden
 
         Args:
         outer_rect: cckkRectangle object representing the outer rectangle
@@ -413,17 +414,7 @@ class cckkImage:
         """
         self.xpos += dx
         self.ypos += dy
-
-        if keep_rect is not None:
-            if self.xpos < keep_rect.xpos:
-                self.xpos = keep_rect.xpos
-            if self.ypos < keep_rect.ypos:
-                self.ypos = keep_rect.ypos
-            if self.xpos + self.xcols > keep_rect.xpos + keep_rect.xcols:
-                self.xpos = keep_rect.xpos + keep_rect.xcols - self.xcols
-            if self.ypos + self.yrows > keep_rect.ypos + keep_rect.yrows:
-                self.ypos = keep_rect.ypos + keep_rect.yrows - self.yrows
-
+        self._rect.keep_within(keep_rect)
         return self
         
     def roll(self, dx, dy):
