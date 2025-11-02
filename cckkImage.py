@@ -1,3 +1,9 @@
+# To Do
+# 1. Use cckkRectangle as base class for cckkImage and cckkViewer
+# 2. Move calculate_mer() to cckkRectangle   ## attributes = [node.attr for node in nodes]
+# 3. Add move_img() and align_img() to cckkViewer
+# 4. Intersection of rectangles function to cckkRectangle ... collision detection
+
 import copy
 
 class cckkRectangle:
@@ -80,7 +86,6 @@ class cckkRectangle:
 
         return self
     
-
     def str(self):  
         return "cckkRectangle: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
 
@@ -104,13 +109,10 @@ class cckkViewer:
         Raises:
         Exception: Never
         """
-
-        # Assign default values
         self._rect = cckkRectangle(xcols, yrows, xpos, ypos) # Rectangle representing the viewer size and position
         self._fill = fill   # Fill colour if the image does not fill the viewer
         self._mer_rect = cckkRectangle() # Minimum enclosing rectangle of the images
         self._images = [] # List of cckkImage objects that are viewed through the viewer. First image in the list is at the *back*.
-
         self.add_images(images)
 
     @property
@@ -157,7 +159,6 @@ class cckkViewer:
         Raises:
         Exception: If invalid image specified
         """
-
         for img in reversed(images):
             if not isinstance(img, cckkImage):
                 raise Exception("Invalid image specified")
@@ -221,6 +222,7 @@ class cckkViewer:
 
     def calculate_mer(self):
         """Calculate the minimum enclosing rectangle of the images"""
+        
         self._mer_rect.set()
         if len(self._images) > 0:
             min_xpos = min([img.xpos for img in self._images])
@@ -250,19 +252,29 @@ class cckkViewer:
 
         if keep:
             self._rect.keep_within(self._mer_rect)
-
-            # Test bottom-right first so that top-left correction is not overridden
-#            if self.xpos + self.xcols < self._mer_rect.xpos + self._mer_rect.xcols:
-#                self.xpos = self._mer_rect.xpos + self._mer_rect.xcols - self.xcols
-#            if self.ypos + self.yrows < self._mer_rect.ypos + self._mer_rect.yrows:
-#                self.ypos = self._mer_rect.ypos + self._mer_rect.yrows - self.yrows
-#            if self.xpos < self._mer_rect.xpos:
-#                self.xpos = self._mer_rect.xpos
-#            if self.ypos < self._mer_rect.ypos:
-#                self.ypos = self._mer_rect.ypos
                 
         return self.view()
         
+    def find_image(self, name):
+        """Find an image in the viewer by name
+
+        Args:
+        name: Name of the image to find
+
+        Returns:
+        Index of the image in the viewer's image list, or -1 if not found
+        """
+        for idx, img in enumerate(self._images):
+            if img._name == name:
+                return idx
+        return -1
+    
+    def move_img(self, name, dx, dy, keep = False):
+        idx = self.find_image(name)
+        if idx >= 0:
+            self._images[idx].move(dx, dy, self._mer_rect if keep else None)
+        return self
+    
     def str(self):
         str = "cckkViewer:\n"
         str += "  Fill: " + str(self._fill) + "\n"
@@ -293,7 +305,7 @@ class cckkImage:
         , 's': (192,192,192) # Silver
         }
 
-    def __init__(self, imgA = None, imgStr = None, img_cols = 8):
+    def __init__(self, imgA = None, imgStr = None, img_cols = 8, name = ""):
         """Contructs a cckkImage object
 
         Args:
@@ -306,9 +318,8 @@ class cckkImage:
         Raises:
         Exception: If invalid image specified
         """
-
-        # Assign default values
-        self._imgAA = None    # Two-dimensional array of image pixels
+        self._imgAA = None   # Two-dimensional array of image pixels
+        self._name = name    # Name of the image
         self._rect = cckkRectangle(0, 0, 0, 0) # Rectangle representing the image size and position
 
         if (imgA is not None):
