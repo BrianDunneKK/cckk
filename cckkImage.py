@@ -89,7 +89,15 @@ class cckkRectangle:
         return "cckkRectangle: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
 
 
-class cckkViewer:
+class cckkViewer(cckkRectangle):
+    ## Class representation of a viewer of images for display on a SenseHat
+    # The viewer represents the view area through which an image is seen. This view can be displayed on a SenseHat LED matrix.
+    # The viewer can contain multiple images, which are layered on top of each other.
+    # The base class cckkRectangle is used to represent the viewer size and position.
+    ##############################################################################################
+
+    """Class representation of a viewer of images for display on a SenseHat"""
+
     def __init__(self, xcols = 8, yrows = 8, xpos = 0, ypos = 0, fill = [0,0,0], images = []):
         """Contructs a cckkViewer object.
         The viewer represents the view area through which an image is seen. This view can be displayed on a SenseHat LED matrix.
@@ -108,42 +116,11 @@ class cckkViewer:
         Raises:
         Exception: Never
         """
-        self._rect = cckkRectangle(xcols, yrows, xpos, ypos) # Rectangle representing the viewer size and position
+        super().__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos)  # Initialize cckkRectangle base class
         self._fill = fill   # Fill colour if the image does not fill the viewer
         self._mer_rect = cckkRectangle() # Minimum enclosing rectangle of the images
         self._images = [] # List of cckkImage objects that are viewed through the viewer. First image in the list is at the *back*.
         self.add_images(images)
-
-    @property
-    def rect(self):
-        """Rectangle representing the viewer size and position"""
-        return self._rect
-    
-    @property
-    def xcols(self):
-        """No. of columns in the image"""
-        return self._rect.xcols
-    
-    @property
-    def yrows(self):
-        """No. of rows in the image"""
-        return self._rect.yrows
-
-    @property
-    def xpos(self):
-        return self._rect.xpos
-
-    @xpos.setter
-    def xpos(self, value):
-        self._rect.xpos = value
-
-    @property
-    def ypos(self):
-        return self._rect.ypos
-
-    @ypos.setter
-    def ypos(self, value):
-        self._rect.ypos = value
 
     @property
     def background(self):
@@ -254,7 +231,7 @@ class cckkViewer:
         self.ypos = self.ypos + dy
 
         if keep:
-            self._rect.keep_within(self._mer_rect)
+            self.keep_within(self._mer_rect)
                 
         return self.view()
         
@@ -281,20 +258,24 @@ class cckkViewer:
     def align_image(self, name, horiz = "C", vert = "C"):
         idx = self.find_image(name)
         if idx >= 0:
-            self._images[idx].align(self._rect, horiz, vert)
+            self._images[idx].align(self, horiz, vert)
         return self
 
     def str(self):
         str = "cckkViewer:\n"
+        str += "  " + super().str() + "\n"
         str += "  Fill: " + str(self._fill) + "\n"
-        str += "  " + self._rect.str() + "\n"
         str += "  MER: " + self._mer_rect.str() + "\n"
         str += "  Images: " + str(len(self._images)) + "\n"
         return str
 
 
 class cckkImage(cckkRectangle):
-    """Class representation of an image on a SenseHat"""
+    ## Class representation of an image
+    # The base class cckkRectangle is used to represent the image size and position.
+    ##############################################################################################
+
+    """Class representation of an image"""
     def_colour_dict = {
         '.': (0,0,0)         # Black
         , 'w': (255,255,255) # White
