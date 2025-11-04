@@ -88,6 +88,22 @@ class cckkRectangle:
     def str(self):  
         return "cckkRectangle: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
 
+    def calculate_mer(rectangles = []):
+        """Calculate the minimum enclosing rectangle of a list of rectangles"""
+        mer = cckkRectangle()
+        if len(rectangles) > 0:
+            min_xpos = min([rect.xpos for rect in rectangles])
+            min_ypos = min([rect.ypos for rect in rectangles])
+            max_xpos = max([rect.xpos + rect.xcols for rect in rectangles])
+            max_ypos = max([rect.ypos + rect.yrows for rect in rectangles])
+            mer.set(
+                xcols = max_xpos - min_xpos,
+                yrows = max_ypos - min_ypos,
+                xpos = min_xpos,
+                ypos = min_ypos
+            )
+        return mer
+
 
 class cckkViewer(cckkRectangle):
     ## Class representation of a viewer of images for display on a SenseHat
@@ -140,7 +156,8 @@ class cckkViewer(cckkRectangle):
                 raise Exception("Invalid image specified")
             self._images.append(img)
 
-        self.calculate_mer()
+        self._mer_rect = cckkRectangle.calculate_mer(self._images)
+        #self.calculate_mer()
 
         return self
 
