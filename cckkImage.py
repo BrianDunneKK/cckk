@@ -1,7 +1,5 @@
 # To Do
-# 1. Use cckkRectangle as base class for cckkImage and cckkViewer
-# 2. Move calculate_mer() to cckkRectangle   ## attributes = [node.attr for node in nodes]
-# 4. Intersection of rectangles function to cckkRectangle ... collision detection
+# + Intersection of rectangles function to cckkRectangle ... collision detection
 
 import copy
 
@@ -155,10 +153,7 @@ class cckkViewer(cckkRectangle):
             if not isinstance(img, cckkImage):
                 raise Exception("Invalid image specified")
             self._images.append(img)
-
         self._mer_rect = cckkRectangle.calculate_mer(self._images)
-        #self.calculate_mer()
-
         return self
 
     def align(self, img_name = "", horiz = "C", vert = "C"):
@@ -216,22 +211,6 @@ class cckkViewer(cckkRectangle):
                         viewer_viewA[yrow*self.yrows + xcol] = img.image[yrow_img][xcol_img]
 
         return viewer_viewA
-
-    def calculate_mer(self):
-        """Calculate the minimum enclosing rectangle of the images"""
-        
-        self._mer_rect.set()
-        if len(self._images) > 0:
-            min_xpos = min([img.xpos for img in self._images])
-            min_ypos = min([img.ypos for img in self._images])
-            max_xpos = max([img.xpos + img.xcols for img in self._images])
-            max_ypos = max([img.ypos + img.yrows for img in self._images])
-            self._mer_rect.set(
-                xcols = max_xpos - min_xpos,
-                yrows = max_ypos - min_ypos,
-                xpos = min_xpos,
-                ypos = min_ypos
-            )
 
     def move(self, dx, dy, keep = False):
         """Move the viewer
