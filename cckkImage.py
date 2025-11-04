@@ -293,7 +293,7 @@ class cckkViewer:
         return str
 
 
-class cckkImage:
+class cckkImage(cckkRectangle):
     """Class representation of an image on a SenseHat"""
     def_colour_dict = {
         '.': (0,0,0)         # Black
@@ -329,7 +329,6 @@ class cckkImage:
         """
         self._imgAA = None   # Two-dimensional array of image pixels
         self._name = name    # Name of the image
-        self._rect = cckkRectangle(0, 0, 0, 0) # Rectangle representing the image size and position
 
         if (imgA is not None):
             self.setFromArray(imgA, img_cols)
@@ -385,44 +384,13 @@ class cckkImage:
 
     def update_size(self):
         """Update the image size"""
-        self._rect.xcols = len(self._imgAA[0])
-        self._rect.yrows = len(self._imgAA)
+        self.xcols = len(self._imgAA[0])
+        self.yrows = len(self._imgAA)
 
     @property
     def image(self):
         """Copy of the full image"""
         return copy.deepcopy(self._imgAA)
-
-    @property
-    def rect(self):
-        """Rectangle representing the image size and position"""
-        return self._rect
-    
-    @property
-    def xcols(self):
-        """No. of columns in the image"""
-        return self._rect._xcols
-
-    @property
-    def yrows(self):
-        """No. of rows in the image"""
-        return self._rect.yrows
-
-    @property
-    def xpos(self):
-        return self._rect.xpos
-
-    @xpos.setter
-    def xpos(self, value):
-        self._rect.xpos = value
-
-    @property
-    def ypos(self):
-        return self._rect.ypos
-
-    @ypos.setter
-    def ypos(self, value):
-        self._rect.ypos = value
 
     def move(self, dx, dy, keep_rect = None):
         """Move the image (relative to the viewer)
@@ -437,7 +405,7 @@ class cckkImage:
         """
         self.xpos += dx
         self.ypos += dy
-        self._rect.keep_within(keep_rect)
+        self.keep_within(keep_rect)
         return self
         
     def roll(self, dx, dy):
@@ -454,7 +422,7 @@ class cckkImage:
 
     def str(self):
         as_str = "cckkImage:\n"
-        str += "  " + self._rect.str() + "\n"
+        str += "  " + super().str() + "\n"
         for row in self._imgAA:
             for pixel in row:
                 as_str += str(pixel) + " "
