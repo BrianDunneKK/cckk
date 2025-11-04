@@ -1,9 +1,7 @@
 # To Do
 # 1. Use cckkRectangle as base class for cckkImage and cckkViewer
 # 2. Move calculate_mer() to cckkRectangle   ## attributes = [node.attr for node in nodes]
-# 3. Add move_img() and align_img() to cckkViewer
 # 4. Intersection of rectangles function to cckkRectangle ... collision detection
-# 5. Rename align_viewer() and align_image() to align()
 
 import copy
 
@@ -283,7 +281,7 @@ class cckkViewer:
     def align_image(self, name, horiz = "C", vert = "C"):
         idx = self.find_image(name)
         if idx >= 0:
-            self._images[idx].align_image(self._rect, horiz, vert)
+            self._images[idx].align(self._rect, horiz, vert)
         return self
 
     def str(self):
@@ -368,7 +366,7 @@ class cckkImage:
         self.update_size()
         return self
 
-    def align_image(self, viewer_rect, horiz = "C", vert = "C"):
+    def align(self, viewer_rect, horiz = "C", vert = "C"):
         if horiz.upper() == "L":
             self.xpos = viewer_rect.xpos
         elif horiz.upper() == "R":
