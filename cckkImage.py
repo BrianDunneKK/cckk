@@ -327,8 +327,9 @@ class cckkImage(cckkRectangle):
         Raises:
         Exception: If invalid image specified
         """
-        self._imgAA = None   # Two-dimensional array of image pixels
-        self._name = name    # Name of the image
+        super().__init__()  # Initialize cckkRectangle base class
+        self._imgAA = None  # Two-dimensional array of image pixels
+        self._name = name   # Name of the image
 
         if (imgA is not None):
             self.setFromArray(imgA, img_cols)
