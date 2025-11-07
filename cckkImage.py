@@ -1,6 +1,7 @@
 # To Do
 # + Intersection of rectangles function to cckkRectangle ... collision detection
 
+import sys
 import copy
 
 class cckkRectangle:
