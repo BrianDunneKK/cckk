@@ -130,7 +130,11 @@ class cckkViewer(cckkRectangle):
         Raises:
         Exception: Never
         """
-        super().__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos)  # Initialize cckkRectangle base class
+        if (sys.version_info[0] >= 3):
+            super().__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos)  # Initialize cckkRectangle base class
+        else:
+            super(cckkRectangle, self).__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos)  # Initialize cckkRectangle base class
+
         self._fill = fill   # Fill colour if the image does not fill the viewer
         self._mer_rect = cckkRectangle() # Minimum enclosing rectangle of the images
         self._images = [] # List of cckkImage objects that are viewed through the viewer. First image in the list is at the *back*.
@@ -259,7 +263,12 @@ class cckkViewer(cckkRectangle):
 
     def str(self):
         str = "cckkViewer:\n"
-        str += "  " + super().str() + "\n"
+
+        if (sys.version_info[0] >= 3):
+            str += "  " + super().str() + "\n"
+        else:
+            str += "  " + super(cckkRectangle, self).str() + "\n"
+        
         str += "  Fill: " + str(self._fill) + "\n"
         str += "  MER: " + self._mer_rect.str() + "\n"
         str += "  Images: " + str(len(self._images)) + "\n"
@@ -304,7 +313,12 @@ class cckkImage(cckkRectangle):
         Raises:
         Exception: If invalid image specified
         """
-        super().__init__()  # Initialize cckkRectangle base class
+
+        if (sys.version_info[0] >= 3):
+            super().__init__()  # Initialize cckkRectangle base class
+        else:
+            super(cckkRectangle, self).__init__()  # Initialize cckkRectangle base class
+
         self._imgAA = None  # Two-dimensional array of image pixels
         self._name = name   # Name of the image
 
