@@ -1,5 +1,6 @@
 # To Do
-# + Intersection of rectangles function to cckkRectangle ... collision detection
+#  - Intersection of rectangles function to cckkRectangle ... collision detection
+#  - Add transparency support to cckkImage and cckkViewer
 
 import copy
 
@@ -86,6 +87,30 @@ class cckkRectangle:
     def str(self):  
         return "cckkRectangle: " + str(self.xcols) + " x " + str(self.yrows) + " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n"
 
+    def intersection(self, other_rect):
+        """Calculate the intersection of this rectangle with another rectangle
+
+        Args:
+        other_rect: cckkRectangle object representing the other rectangle
+
+        Returns:
+        cckkRectangle object representing the intersection rectangle, or None if there is no intersection
+        """
+        inter_xpos = max(self.xpos, other_rect.xpos)
+        inter_ypos = max(self.ypos, other_rect.ypos)
+        inter_xend = min(self.xpos + self.xcols, other_rect.xpos + other_rect.xcols)
+        inter_yend = min(self.ypos + self.yrows, other_rect.ypos + other_rect.yrows)
+
+        if inter_xend > inter_xpos and inter_yend > inter_ypos:
+            return cckkRectangle(
+                xcols = inter_xend - inter_xpos,
+                yrows = inter_yend - inter_ypos,
+                xpos = inter_xpos,
+                ypos = inter_ypos
+            )
+        else:
+            return None
+        
     def calculate_mer(rectangles = []):
         """Calculate the minimum enclosing rectangle of a list of rectangles"""
         mer = cckkRectangle()
@@ -258,6 +283,23 @@ class cckkViewer(cckkRectangle):
             self._images[idx].align(self, horiz, vert)
         return self
 
+    def intersection(self, img1_name, img2_name):
+        """Calculate the intersection of two images in the viewer
+
+        Args:
+        img1_name: Name of the first image
+        img2_name: Name of the second image
+
+        Returns:
+        cckkImage object representing the intersection image, or None if there is no intersection
+        """
+        idx1 = self.find_image(img1_name)
+        idx2 = self.find_image(img2_name)
+        if idx1 >= 0 and idx2 >= 0:
+            return self._images[idx1].intersection(self._images[idx2])
+        else:
+            return None
+
     def str(self):
         str = "cckkViewer:\n"
         str += "  " + super().str() + "\n"
@@ -292,7 +334,7 @@ class cckkImage(cckkRectangle):
         , 's': (192,192,192) # Silver
         }
 
-    def __init__(self, imgA = None, imgStr = None, img_cols = 8, name = ""):
+    def __init__(self, imgA = None, imgAA = None, imgStr = None, img_cols = 8, name = ""):
         """Contructs a cckkImage object
 
         Args:
@@ -311,6 +353,9 @@ class cckkImage(cckkRectangle):
 
         if (imgA is not None):
             self.setFromArray(imgA, img_cols)
+        elif (imgAA is not None):
+            self._imgAA = imgAA
+            self.update_size()
         elif (imgStr is not None):
             self.setFromString(imgStr, None)
 
@@ -371,6 +416,18 @@ class cckkImage(cckkRectangle):
         """Copy of the full image"""
         return copy.deepcopy(self._imgAA)
 
+    def pixel(self, x, y):
+        """Get the pixel at the specified position
+
+        Args:
+        x: X-position of the pixel
+        y: Y-position of the pixel
+
+        Returns:
+        Pixel value as a list containing [R, G, B] (red, green, blue)
+        """
+        return self._imgAA[y][x]
+
     def move(self, dx, dy, keep_rect = None):
         """Move the image (relative to the viewer)
 
@@ -398,6 +455,39 @@ class cckkImage(cckkRectangle):
             result.append(new_row)
         self._imgAA = result
         return self
+
+    def intersection(self, other_img):
+        """Calculate the intersection of this image with another image
+
+        Args:
+        other_img: cckkImage object representing the other image
+
+        Returns:
+        cckkImage object representing the intersection image, or None if there is no intersection
+        """
+        inter_rect = super().intersection(other_img)
+        if inter_rect is not None:
+            inter_imgAA = []
+            for y in range(inter_rect.yrows):
+                row_pixels = []
+                for x in range(inter_rect.xcols):
+                    x_self = inter_rect.xpos + x - self.xpos
+                    y_self = inter_rect.ypos + y - self.ypos
+                    x_other = inter_rect.xpos + x - other_img.xpos
+                    y_other = inter_rect.ypos + y - other_img.ypos
+                    if (0 <= x_self < self.xcols and 0 <= y_self < self.yrows and
+                        0 <= x_other < other_img.xcols and 0 <= y_other < other_img.yrows):
+                        row_pixels.append(self.pixel(x_self, y_self))  # Take the pixel from this image
+                    else:
+                        print("Warning: Pixel out of bounds during intersection calculation")
+                        row_pixels.append((0,0,0)) # Default to black if out of bounds ... should never happen
+                inter_imgAA.append(row_pixels)
+            inter_img = cckkImage(imgAA=inter_imgAA)
+            inter_img.xpos = inter_rect.xpos
+            inter_img.ypos = inter_rect.ypos
+            return inter_img
+        else:
+            return None
 
     def str(self):
         as_str = "cckkImage:\n"
