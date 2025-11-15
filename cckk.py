@@ -355,7 +355,7 @@ class cckkImage(cckkRectangle):
         , 'v': (128,0,255)   # Violet
         }
 
-    def __init__(self, imgA = None, imgAA = None, imgStr = None, img_cols = 8, name = ""):
+    def __init__(self, imgA = None, imgAA = None, imgStr = None, imgFile = None, img_cols = 8, name = ""):
         """Contructs a cckkImage object
 
         Args:
@@ -379,6 +379,8 @@ class cckkImage(cckkRectangle):
             self.update_size()
         elif (imgStr is not None):
             self.createFromString(imgStr, None)
+        elif (imgFile is not None):
+            self.createFromImageFile(imgFile)
 
     def createFromArray(self, imgA, img_cols = 8):
         self._imgAA = [imgA[i:i+img_cols] for i in range(0, len(imgA), img_cols)]
@@ -410,11 +412,11 @@ class cckkImage(cckkRectangle):
         self.update_size()
         return self
 
-    def createFromImageFile(self, filename):
+    def createFromImageFile(self, img_filename):
         """Set the image from an image file
 
         Args:
-        filename: Path to the image file
+        img_filename: Path to the image file
 
         Returns:
         cckkImage object
@@ -427,7 +429,7 @@ class cckkImage(cckkRectangle):
         except ImportError:
             raise Exception("PIL module not found. Please install Pillow to use this feature.")
 
-        img = Image.open(filename)
+        img = Image.open(img_filename)
         img = img.convert("RGB")  # Ensure image is in RGB format
         imgA = list(img.getdata())
         img_cols, img_rows = img.size
