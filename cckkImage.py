@@ -301,12 +301,12 @@ class cckkViewer(cckkRectangle):
             return None
 
     def str(self):
-        str = "cckkViewer:\n"
-        str += "  " + super().str() + "\n"
-        str += "  Fill: " + str(self._fill) + "\n"
-        str += "  MER: " + self._mer_rect.str() + "\n"
-        str += "  Images: " + str(len(self._images)) + "\n"
-        return str
+        as_str = "cckkViewer:\n"
+        as_str += "  " + super().str() + "\n"
+        as_str += "  Fill: " + str(self._fill) + "\n"
+        as_str += "  MER: " + self._mer_rect.str() + "\n"
+        as_str += "  Images: " + str(len(self._images)) + "\n"
+        return as_str
 
 
 class cckkImage(cckkRectangle):
@@ -498,7 +498,7 @@ class cckkImage(cckkRectangle):
 
     def str(self):
         as_str = "cckkImage:\n"
-        str += "  " + super().str() + "\n"
+        as_str += "  " + super().str() + "\n"
         for row in self._imgAA:
             for pixel in row:
                 as_str += str(pixel) + " "
