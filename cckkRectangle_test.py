@@ -1,7 +1,7 @@
 import unittest
 from cckk import cckkRectangle, cckkViewer, cckkImage
 
-class TestStringMethods(unittest.TestCase):
+class test_cckkRectangle(unittest.TestCase):
 
     def test_cckkRectangle_intersection_no_overlap(self):
         r1 = cckkRectangle(xcols=2, yrows=2, xpos=0, ypos=0)
