@@ -1,6 +1,3 @@
-# To Do
-#  - Intersection of rectangles function to cckkRectangle ... collision detection
-
 import copy
 
 class cckkRectangle:
@@ -291,7 +288,7 @@ class cckkViewer(cckkRectangle):
         img2_name: Name of the second image
 
         Returns:
-        cckkImage object representing the intersection image, or None if there is no intersection
+        cckkImage object representing the intersection image, or None if there is no intersection. Pixels are taken from the first image.
         """
         idx1 = self.find_image(img1_name)
         idx2 = self.find_image(img2_name)
@@ -299,6 +296,23 @@ class cckkViewer(cckkRectangle):
             return self._images[idx1].intersection(self._images[idx2])
         else:
             return None
+
+    def collision(self, img1_name, img2_name):
+        """Count the number of pixels that collide between two images in the viewer, ignoring transparent pixels
+
+        Args:
+        img1_name: Name of the first image
+        img2_name: Name of the second image
+
+        Returns:
+        Number of pixels that collide between the two images
+        """
+        idx1 = self.find_image(img1_name)
+        idx2 = self.find_image(img2_name)
+        if idx1 >= 0 and idx2 >= 0:
+            return self._images[idx1].collision(self._images[idx2])
+        else:
+            return 0
 
     def str(self):
         as_str = "cckkViewer:\n"
@@ -495,6 +509,33 @@ class cckkImage(cckkRectangle):
             return inter_img
         else:
             return None
+        
+        
+    def collision(self, other_img):
+        """Count the number of pixels that collide with another image, ignoring transparent pixels
+
+        Args:
+        other_img: cckkImage object representing the other image
+
+        Returns:
+        Number of pixels that collide between the two images
+        """
+        collision_count = 0
+        inter_rect = super().intersection(other_img)
+        if inter_rect is not None:
+            for y in range(inter_rect.yrows):
+                for x in range(inter_rect.xcols):
+                    x_self = inter_rect.xpos + x - self.xpos
+                    y_self = inter_rect.ypos + y - self.ypos
+                    x_other = inter_rect.xpos + x - other_img.xpos
+                    y_other = inter_rect.ypos + y - other_img.ypos
+                    if (0 <= x_self < self.xcols and 0 <= y_self < self.yrows and
+                        0 <= x_other < other_img.xcols and 0 <= y_other < other_img.yrows):
+                        pixel_self = self.pixel(x_self, y_self)
+                        pixel_other = other_img.pixel(x_other, y_other)
+                        if (pixel_self is not None and pixel_other is not None):
+                            collision_count += 1
+        return collision_count
 
     def str(self):
         as_str = "cckkImage:\n"
