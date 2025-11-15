@@ -430,9 +430,15 @@ class cckkImage(cckkRectangle):
             raise Exception("PIL module not found. Please install Pillow to use this feature.")
 
         img = Image.open(img_filename)
-        img = img.convert("RGB")  # Ensure image is in RGB format
+        img = img.convert("RGBA")  # Ensure image is in RGB format
         imgA = list(img.getdata())
         img_cols, img_rows = img.size
+        for i in range(len(imgA)):
+            r, g, b, a = imgA[i]
+            if a == 0:
+                imgA[i] = None
+            else:
+                imgA[i] = (r, g, b)
         self.createFromArray(imgA, img_cols)
         return self
 
