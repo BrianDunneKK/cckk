@@ -234,7 +234,8 @@ class cckkViewer(cckkRectangle):
                     xcol_img = self.xpos + xcol - img.xpos
                     yrow_img = self.ypos + yrow - img.ypos
                     if (xcol_img >= 0 and xcol_img < img.xcols and yrow_img >= 0 and yrow_img < img.yrows):
-                        viewer_viewA[yrow*self.yrows + xcol] = img.image[yrow_img][xcol_img]
+                        if (img.image[yrow_img][xcol_img] is not None):
+                            viewer_viewA[yrow*self.yrows + xcol] = img.image[yrow_img][xcol_img]
 
         return viewer_viewA
 
@@ -316,7 +317,8 @@ class cckkImage(cckkRectangle):
 
     """Class representation of an image"""
     def_colour_dict = {
-        '.': (0,0,0)         # Black
+        '.': None            # Transparent
+        ,'x': (0,0,0)        # Black
         , 'w': (255,255,255) # White
         , 'r': (255,0,0)     # Red
         , 'g': (0,255,0)     # Green
