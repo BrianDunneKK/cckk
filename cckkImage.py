@@ -1,6 +1,5 @@
 # To Do
 #  - Intersection of rectangles function to cckkRectangle ... collision detection
-#  - Add transparency support to cckkImage and cckkViewer
 
 import copy
 
@@ -334,6 +333,12 @@ class cckkImage(cckkRectangle):
         , 'Y': (128,128,0)   # Olive
         , 'M': (128,0,128)   # Purple
         , 's': (192,192,192) # Silver
+        , "p": (255,0,128)   # Pink
+        , 'o': (255,128,0)   # Orange
+        , 'l': (0,255,128)   # Lime
+        , 'd': (128,255,0)   # Gold
+        , 't': (0,128,255)   # Turquoise
+        , 'v': (128,0,255)   # Violet
         }
 
     def __init__(self, imgA = None, imgAA = None, imgStr = None, img_cols = 8, name = ""):
