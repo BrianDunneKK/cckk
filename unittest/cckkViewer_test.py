@@ -2,7 +2,7 @@ import unittest
 from cckk import cckkImage, cckkViewer
 
 
-class test_cckkViewermage(unittest.TestCase):
+class test_cckkViewer(unittest.TestCase):
 
     def test_cckkViewer_properties(self):
         viewer0 = cckkViewer()

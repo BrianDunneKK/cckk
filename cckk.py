@@ -1,6 +1,5 @@
 import copy
 
-
 class cckkRectangle:
     def __init__(self, xcols=0, yrows=0, xpos=0, ypos=0):
         """Contructs a cckkRectangle object.
@@ -782,3 +781,44 @@ class cckkImage(cckkRectangle):
                 as_str += str(pixel) + " "
             as_str += "\n"
         return as_str
+
+
+class cckkSenseHat:
+    """Class wrapper for SenseHat class"""
+
+    def __init__(self):
+        """Contructs a cckkSenseHat object"""
+        self._sense = None
+        
+    def setSenseHat(self, sense_hat):
+        """Associate SenHat object
+
+        Args:
+            sense_hat (SenseHat): SenseHat object
+
+        Raises:
+            Exception: Invalid SenseHat object provided
+        """
+        if sense_hat is None:
+            raise Exception("A SenseHat object must be provided")
+        
+        get_orientation = getattr(sense_hat, "get_orientation", None)
+        if get_orientation is None or not callable(sense_hat.get_orientation):
+            raise Exception("A SenseHat object must be provided")
+
+        self._sense = sense_hat
+        
+
+class cckkSenseHatEmu:
+    """Class for SenseHat emulator"""
+
+    def __init__(self):
+        """Contructs a cckkSenseHatEmu object"""
+        self._x = None
+        
+    def get_orientation(self):
+        return {"pitch": 0, "roll": 0, "yaw": 0}
+
+
+if __name__ == '__main__':
+    print("cckk module")
