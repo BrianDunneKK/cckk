@@ -94,7 +94,7 @@ class cckkRectangle:
             + ")\n"
         )
 
-    def intersection(self, other_rect):
+    def overlap(self, other_rect):
         """Calculate the intersection of this rectangle with another rectangle
 
         Args:
@@ -302,7 +302,7 @@ class cckkViewer(cckkRectangle):
             self._images[idx].align(self, horiz, vert)
         return self
 
-    def intersection(self, img1_name, img2_name):
+    def overlap(self, img1_name, img2_name):
         """Calculate the intersection of two images in the viewer
 
         Args:
@@ -310,29 +310,29 @@ class cckkViewer(cckkRectangle):
         img2_name: Name of the second image
 
         Returns:
-        cckkImage object representing the intersection image, or None if there is no intersection. Pixels are taken from the first image.
+        cckkImage object representing the overlapping image, or None if there is no overlap. Pixels are taken from the first image.
         """
         idx1 = self.find_image(img1_name)
         idx2 = self.find_image(img2_name)
         if idx1 >= 0 and idx2 >= 0:
-            return self._images[idx1].intersection(self._images[idx2])
+            return self._images[idx1].overlap(self._images[idx2])
         else:
             return None
 
-    def collision(self, img1_name, img2_name):
-        """Count the number of pixels that collide between two images in the viewer, ignoring transparent pixels
+    def overlap_count(self, img1_name, img2_name):
+        """Count the number of pixels that overlap between two images in the viewer, ignoring transparent pixels
 
         Args:
         img1_name: Name of the first image
         img2_name: Name of the second image
 
         Returns:
-        Number of pixels that collide between the two images
+        Number of pixels that overlap between the two images
         """
         idx1 = self.find_image(img1_name)
         idx2 = self.find_image(img2_name)
         if idx1 >= 0 and idx2 >= 0:
-            return self._images[idx1].collision(self._images[idx2])
+            return self._images[idx1].overlap_count(self._images[idx2])
         else:
             return 0
 
@@ -561,16 +561,17 @@ class cckkImage(cckkRectangle):
         self._imgAA = result
         return self
 
-    def intersection(self, other_img):
+    def overlap(self, other_img, top_only=False):
         """Calculate the intersection of this image with another image
 
         Args:
         other_img: cckkImage object representing the other image
+        top_only: If True, only consider pixels from this image (ignore pixels from other image)
 
         Returns:
         cckkImage object representing the intersection image, or None if there is no intersection
         """
-        inter_rect = super().intersection(other_img)
+        inter_rect = super().overlap(other_img)
         if inter_rect is not None:
             inter_imgAA = []
             for y in range(inter_rect.yrows):
@@ -586,16 +587,17 @@ class cckkImage(cckkRectangle):
                         and 0 <= x_other < other_img.xcols
                         and 0 <= y_other < other_img.yrows
                     ):
-                        row_pixels.append(
-                            self.pixel(x_self, y_self)
-                        )  # Take the pixel from this image
+                        pixel_self = self.pixel(x_self, y_self)
+                        if top_only:
+                            row_pixels.append(pixel_self)  # Take the pixel from this image
+                        else:
+                            pixel_other = other_img.pixel(x_other, y_other)
+                            if pixel_self is not None:
+                                row_pixels.append(pixel_self)  # Take the pixel from this image
+                            else:
+                                row_pixels.append(pixel_other)  # Take the pixel from the other image
                     else:
-                        print(
-                            "Warning: Pixel out of bounds during intersection calculation"
-                        )
-                        row_pixels.append(
-                            (0, 0, 0)
-                        )  # Default to black if out of bounds ... should never happen
+                        raise Exception("Pixel incorrectly out of bounds during intersection calculation")
                 inter_imgAA.append(row_pixels)
             inter_img = cckkImage(imgAA=inter_imgAA)
             inter_img.xpos = inter_rect.xpos
@@ -604,17 +606,17 @@ class cckkImage(cckkRectangle):
         else:
             return None
 
-    def collision(self, other_img):
-        """Count the number of pixels that collide with another image, ignoring transparent pixels
+    def overlap_count(self, other_img):
+        """Count the number of pixels that overlap with another image, ignoring transparent pixels
 
         Args:
         other_img: cckkImage object representing the other image
 
         Returns:
-        Number of pixels that collide between the two images
+        Number of pixels that overlap between the two images
         """
-        collision_count = 0
-        inter_rect = super().intersection(other_img)
+        pixel_count = 0
+        inter_rect = super().overlap(other_img)
         if inter_rect is not None:
             for y in range(inter_rect.yrows):
                 for x in range(inter_rect.xcols):
@@ -631,8 +633,8 @@ class cckkImage(cckkRectangle):
                         pixel_self = self.pixel(x_self, y_self)
                         pixel_other = other_img.pixel(x_other, y_other)
                         if pixel_self is not None and pixel_other is not None:
-                            collision_count += 1
-        return collision_count
+                            pixel_count += 1
+        return pixel_count
 
     def str(self):
         as_str = "cckkImage:\n"

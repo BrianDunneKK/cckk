@@ -1,7 +1,7 @@
 import unittest
 from cckk import cckkRectangle, cckkViewer, cckkImage
 
-class TestStringMethods(unittest.TestCase):
+class test_cckk(unittest.TestCase):
 
     def test_cckkImage_setFromImageFile(self):
         img = cckkImage()
