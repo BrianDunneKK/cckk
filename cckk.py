@@ -59,6 +59,13 @@ class cckkRectangle:
     def ypos(self, value):
         self._ypos = value
 
+    def __eq__(self, other): 
+        if not isinstance(other, cckkRectangle):
+            # Don't attempt to compare against unrelated types
+            return NotImplemented
+
+        return self.xpos == other.xpos and self.ypos == other.ypos and self.xcols == other.xcols and self.yrows == other.yrows
+
     def keep_within(self, outer_rect=None):
         """Adjust the rectangle position to keep it fully within another rectangle.
         Test bottom-right first so that top-left correction is not overridden
@@ -144,7 +151,7 @@ class cckkViewer(cckkRectangle):
 
     """Class representation of a viewer of images for display on a SenseHat"""
 
-    def __init__(self, xcols=8, yrows=8, xpos=0, ypos=0, fill=[0, 0, 0], images=[]):
+    def __init__(self, xcols=8, yrows=8, xpos=0, ypos=0, fill=(0, 0, 0), images=[]):
         """Contructs a cckkViewer object.
         The viewer represents the view area through which an image is seen. This view can be displayed on a SenseHat LED matrix.
 
@@ -235,9 +242,9 @@ class cckkViewer(cckkRectangle):
         """View of the images through the viewer
 
         Returns:
-        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+        cckkImage object representing the view of the images through the viewer
         """
-        viewer_viewA = self.background
+        view_img = cckkImage(imgA=self.background, img_cols=self.xcols)
 
         for img in self._images:
             for yrow in range(self.yrows):
@@ -250,12 +257,29 @@ class cckkViewer(cckkRectangle):
                         and yrow_img >= 0
                         and yrow_img < img.yrows
                     ):
-                        if img.image[yrow_img][xcol_img] is not None:
-                            viewer_viewA[yrow * self.yrows + xcol] = img.image[
-                                yrow_img
-                            ][xcol_img]
+                        img_pixel = img.getPixel(xcol_img, yrow_img)
+                        if img_pixel is not None:
+                            view_img.setPixel(xcol, yrow, pixel=img_pixel)
+        return view_img
 
-        return viewer_viewA
+    def moveTo(self, xpos, ypos, keep=False):
+        """Move the viewer to the specified position
+
+        Args:
+        xpos: New x-position
+        ypos: New y-position
+        keep: If True, keeps the cammera over the MER of the images
+
+        Returns:
+        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+        """
+        self.xpos = xpos
+        self.ypos = ypos
+
+        if keep:
+            self.keep_within(self._mer_rect)
+
+        return self.view()
 
     def move(self, dx, dy, keep=False):
         """Move the viewer
@@ -289,6 +313,12 @@ class cckkViewer(cckkRectangle):
             if img._name == name:
                 return idx
         return -1
+
+    def moveTo_img(self, name, xpos, ypos, keep=False):
+        idx = self.find_image(name)
+        if idx >= 0:
+            self._images[idx].moveTo(xpos, ypos, self._mer_rect if keep else None)
+        return self
 
     def move_img(self, name, dx, dy, keep=False):
         idx = self.find_image(name)
@@ -336,6 +366,18 @@ class cckkViewer(cckkRectangle):
         else:
             return 0
 
+    def exportAsString(self, colour_dict=None):
+        """Export the viewer's current view as a string representation
+
+        Args:
+        colour_dict: Dictionary mapping pixel colours to characters.
+
+        Returns:
+        String representation of the viewer's current view
+        """
+        view = self.view()
+        return view.exportAsString(colour_dict)
+
     def str(self):
         as_str = "cckkViewer:\n"
         as_str += "  " + super().str() + "\n"
@@ -379,9 +421,25 @@ class cckkImage(cckkRectangle):
 
     reverse_colour_dict = {v: k for k, v in def_colour_dict.items()}
 
-    def __init__(
-        self, imgA=None, imgAA=None, imgStr=None, imgFile=None, img_cols=8, name=""
-    ):
+    def rgbAsString(pixel, colour_dict=None):
+        """Convert a pixel to its string equivalent
+
+        Args:
+        pixel: Pixel value as a list containing [R, G, B] (red, green, blue)
+        colour_dict: Dictionary mapping pixel colours to characters. If None, uses the default colour dictionary.
+
+        Returns:
+        Pixel value as a character
+        """
+        if colour_dict is None:
+            colour_dict = cckkImage.reverse_colour_dict
+
+        if pixel in colour_dict:
+            return colour_dict[pixel]
+        else:
+            return "?"  # Unknown colour
+
+    def __init__(self, imgA=None, imgAA=None, imgStr=None, imgFile=None, img_cols=8, name=""):
         """Contructs a cckkImage object
 
         Args:
@@ -472,6 +530,21 @@ class cckkImage(cckkRectangle):
         self.createFromArray(imgA, img_cols)
         return self
 
+    def createFromPixel(self, xcols, yrows, pixel = None):
+        """Create an image of the specified size and pixel colour
+
+        Args:
+        pixel: Pixel value as a list containing [R, G, B] (red, green, blue)
+        xcols: Number of columns in the image
+        yrows: Number of rows in the image
+
+        Returns:
+        cckkImage object
+        """
+        self._imgAA = [[pixel for _ in range(xcols)] for _ in range(yrows)]
+        self.update_size()
+        return self
+
     def exportAsString(self, colour_dict=None):
         """Export the image as a string representation
 
@@ -487,10 +560,7 @@ class cckkImage(cckkRectangle):
         img_str = ""
         for row in self._imgAA:
             for pixel in row:
-                if pixel in colour_dict:
-                    img_str += colour_dict[pixel]
-                else:
-                    img_str += "?"  # Unknown colour
+                img_str += cckkImage.rgbAsString(pixel)
             img_str += "\n"
         return img_str.strip()
 
@@ -521,7 +591,7 @@ class cckkImage(cckkRectangle):
         """Copy of the full image"""
         return copy.deepcopy(self._imgAA)
 
-    def pixel(self, x, y):
+    def getPixel(self, x, y):
         """Get the pixel at the specified position
 
         Args:
@@ -531,8 +601,76 @@ class cckkImage(cckkRectangle):
         Returns:
         Pixel value as a list containing [R, G, B] (red, green, blue)
         """
-        return self._imgAA[y][x]
+        return self._imgAA[self.yrows-y-1][x] # Access from bottom-left (0,0)
 
+    def setPixel(self, x, y, pixel = None):
+        """Set the pixel at the specified position
+
+        Args:
+        x: X-position of the pixel
+        y: Y-position of the pixel
+        pixel: Pixel value as a list containing [R, G, B] (red, green, blue)
+
+        Returns:
+        cckkImage object
+        """
+        self._imgAA[self.yrows-y-1][x] = pixel  # Access from bottom-left (0,0)
+        return self
+
+    def pixelAsString(self, x, y, colour_dict=None):
+        """Get the pixel at the specified position as a string character
+
+        Args:
+        x: X-position of the pixel
+        y: Y-position of the pixel
+        colour_dict: Dictionary mapping pixel colours to characters. If None, uses the default colour dictionary.
+
+        Returns:
+        Pixel value as a character
+        """
+        return cckkImage.rgbAsString(self.getPixel(x, y), colour_dict)
+        
+    def getSubImage(self, sub_rect):
+        """Get a sub-image from the image
+
+        Args:
+        sub_rect: cckkRectangle object representing the sub-image area
+
+        Returns:
+        cckkImage object representing the sub-image
+        """
+        sub_imgAA = []
+        for yrow in reversed(range(sub_rect.yrows)):
+            row_pixels = []
+            for xcol in range(sub_rect.xcols):
+                x_img = sub_rect.xpos + xcol - self.xpos
+                y_img = sub_rect.ypos + yrow - self.ypos
+                if 0 <= x_img < self.xcols and 0 <= y_img < self.yrows:
+                    row_pixels.append(self.getPixel(x_img, y_img))
+                else:
+                    row_pixels.append(None)  # Transparent pixel if out of bounds
+            sub_imgAA.append(row_pixels)
+        sub_img = cckkImage(imgAA=sub_imgAA)
+        sub_img.xpos = sub_rect.xpos
+        sub_img.ypos = sub_rect.ypos
+        return sub_img
+
+    def moveTo(self, xpos, ypos, keep_rect=None):
+        """Move the image to the specified position
+
+        Args:
+        xpos: New x-position
+        ypos: New y-position
+        keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
+
+        Returns:
+        cckkImage object
+        """
+        self.xpos = xpos
+        self.ypos = ypos
+        self.keep_within(keep_rect)
+        return self
+    
     def move(self, dx, dy, keep_rect=None):
         """Move the image (relative to the viewer)
 
@@ -574,24 +712,24 @@ class cckkImage(cckkRectangle):
         inter_rect = super().overlap(other_img)
         if inter_rect is not None:
             inter_imgAA = []
-            for y in range(inter_rect.yrows):
+            for yrow in reversed(range(inter_rect.yrows)):
                 row_pixels = []
-                for x in range(inter_rect.xcols):
-                    x_self = inter_rect.xpos + x - self.xpos
-                    y_self = inter_rect.ypos + y - self.ypos
-                    x_other = inter_rect.xpos + x - other_img.xpos
-                    y_other = inter_rect.ypos + y - other_img.ypos
+                for xcol in range(inter_rect.xcols):
+                    x_self = inter_rect.xpos + xcol - self.xpos
+                    y_self = inter_rect.ypos + yrow - self.ypos
+                    x_other = inter_rect.xpos + xcol - other_img.xpos
+                    y_other = inter_rect.ypos + yrow - other_img.ypos
                     if (
                         0 <= x_self < self.xcols
                         and 0 <= y_self < self.yrows
                         and 0 <= x_other < other_img.xcols
                         and 0 <= y_other < other_img.yrows
                     ):
-                        pixel_self = self.pixel(x_self, y_self)
+                        pixel_self = self.getPixel(x_self, y_self)
                         if top_only:
                             row_pixels.append(pixel_self)  # Take the pixel from this image
                         else:
-                            pixel_other = other_img.pixel(x_other, y_other)
+                            pixel_other = other_img.getPixel(x_other, y_other)
                             if pixel_self is not None:
                                 row_pixels.append(pixel_self)  # Take the pixel from this image
                             else:
@@ -618,20 +756,20 @@ class cckkImage(cckkRectangle):
         pixel_count = 0
         inter_rect = super().overlap(other_img)
         if inter_rect is not None:
-            for y in range(inter_rect.yrows):
-                for x in range(inter_rect.xcols):
-                    x_self = inter_rect.xpos + x - self.xpos
-                    y_self = inter_rect.ypos + y - self.ypos
-                    x_other = inter_rect.xpos + x - other_img.xpos
-                    y_other = inter_rect.ypos + y - other_img.ypos
+            for yrow in reversed(range(inter_rect.yrows)):
+                for xcol in range(inter_rect.xcols):
+                    x_self = inter_rect.xpos + xcol - self.xpos
+                    y_self = inter_rect.ypos + yrow - self.ypos
+                    x_other = inter_rect.xpos + xcol - other_img.xpos
+                    y_other = inter_rect.ypos + yrow - other_img.ypos
                     if (
                         0 <= x_self < self.xcols
                         and 0 <= y_self < self.yrows
                         and 0 <= x_other < other_img.xcols
                         and 0 <= y_other < other_img.yrows
                     ):
-                        pixel_self = self.pixel(x_self, y_self)
-                        pixel_other = other_img.pixel(x_other, y_other)
+                        pixel_self = self.getPixel(x_self, y_self)
+                        pixel_other = other_img.getPixel(x_other, y_other)
                         if pixel_self is not None and pixel_other is not None:
                             pixel_count += 1
         return pixel_count

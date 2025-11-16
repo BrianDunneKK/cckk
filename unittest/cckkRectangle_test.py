@@ -2,6 +2,12 @@ import unittest
 from cckk import cckkRectangle, cckkViewer, cckkImage
 
 class test_cckkRectangle(unittest.TestCase):
+    def test_cckkImage_properties(self):
+        rect0 = cckkRectangle()
+        self.assertEqual(rect0.xcols, 0)
+        self.assertEqual(rect0.yrows, 0)
+        self.assertEqual(rect0.xpos, 0)
+        self.assertEqual(rect0.ypos, 0)
 
     def test_cckkRectangle_intersection_no_overlap(self):
         r1 = cckkRectangle(xcols=2, yrows=2, xpos=0, ypos=0)
@@ -17,7 +23,7 @@ class test_cckkRectangle(unittest.TestCase):
         self.assertTrue(inter.ypos == 1)
         self.assertTrue(inter.xcols == 2)
         self.assertTrue(inter.yrows == 2)
-        self.assertTrue(inter == r2.overlap(r1))
+        self.assertTrue(r1.overlap(r2) == r2.overlap(r1))
 
 if __name__ == '__main__':
     unittest.main()
