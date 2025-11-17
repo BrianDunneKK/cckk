@@ -1,2 +1,4 @@
+.gitignore
 .vscode/*
 __pycache__/*
+unittest/__pycache__/*.pyc

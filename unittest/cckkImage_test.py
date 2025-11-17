@@ -46,6 +46,16 @@ class test_cckkImage(unittest.TestCase):
         self.assertEqual(img.xpos, 0)
         self.assertEqual(img.ypos, 0)
 
+    def test_cckkImage_pixels(self):
+        img_str = "rg.\n.cy\nxw."
+        img = cckkImage(imgStr=img_str)
+        expected_pixels = [
+            (255, 0, 0), (0, 255, 0), None,
+            None, (0, 255, 255), (255, 255, 0),
+            (0, 0, 0), (255, 255, 255), None
+        ]
+        self.assertEqual(img.pixels, expected_pixels)
+        
     def test_cckkImage_set_pixel(self):
         img = cckkImage()
         img.createFromPixel(4, 3)
@@ -54,7 +64,6 @@ class test_cckkImage(unittest.TestCase):
         img.setPixel(1, 0, pixel=(0, 255, 0))
         img.setPixel(2, 1, pixel=(0, 0, 255))
         self.assertEqual(img.exportAsString(), "....\n..b.\nrg..")
-
 
     def test_cckkImage_get_rect(self):
         img_str = "rgb\ncym\nxw."

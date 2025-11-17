@@ -37,6 +37,16 @@ rgbcymxw"""
         view_str = "vvvv\nrgbv\ncymv\nxwvv"
         self.assertTrue(img_view.exportAsString() == view_str)
 
+    def test_cckkViewer_pixels(self):
+        img_str = "rg.\n.cy\nxw."
+        img = cckkImage(imgStr=img_str)
+        viewer = cckkViewer(images=[img], xcols=3, yrows=3)
+        expected_pixels = [
+            (255, 0, 0), (0, 255, 0), (0, 0, 0),
+            (0, 0, 0), (0, 255, 255), (255, 255, 0),
+            (0, 0, 0), (255, 255, 255), (0, 0, 0)
+        ]
+        self.assertEqual(viewer.pixels, expected_pixels)
 
 if __name__ == "__main__":
     unittest.main()

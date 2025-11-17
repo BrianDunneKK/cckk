@@ -1,4 +1,5 @@
 import copy
+import time
 
 class cckkRectangle:
     def __init__(self, xcols=0, yrows=0, xpos=0, ypos=0):
@@ -260,6 +261,11 @@ class cckkViewer(cckkRectangle):
                         if img_pixel is not None:
                             view_img.setPixel(xcol, yrow, pixel=img_pixel)
         return view_img
+
+    @property
+    def pixels(self):
+        """View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat"""
+        return self.view().pixels
 
     def moveTo(self, xpos, ypos, keep=False):
         """Move the viewer to the specified position
@@ -590,6 +596,15 @@ class cckkImage(cckkRectangle):
         """Copy of the full image"""
         return copy.deepcopy(self._imgAA)
 
+    @property
+    def pixels(self):
+        """One-dimensional array of image pixels"""
+        imgA = []
+        for row in self._imgAA:
+            for pixel in row:
+                imgA.append(pixel)
+        return imgA
+
     def getPixel(self, x, y):
         """Get the pixel at the specified position
 
@@ -808,6 +823,58 @@ class cckkSenseHat:
 
         self._sense = sense_hat
         
+        
+    def getInputs(self, inc_orientation=True):
+        events = self._sense.stick.get_events()
+        return_events = []
+        simple_events = {
+            "right": "R",
+            "left": "L",
+            "up": "U",
+            "down": "D",
+            "middle": "M"
+        }
+        for event in events:
+            if event.action in ["pressed", "held"]:
+                return_events.append({
+                    "timestamp": event.timestamp,
+                    "direction": event.direction,
+                    "action": event.action,
+                    "simple": simple_events.get(event.direction, "?")
+                })
+        if inc_orientation:
+            orient = self._sense.get_orientation()
+            if orient["roll"] > 5 and orient["roll"] < 25:
+                return_events.append({
+                    "timestamp": time.time(),
+                    "direction": "down",
+                    "action": "roll",
+                    "simple": simple_events.get("down", "?")
+                })
+            elif orient["roll"] > 340 and orient["roll"] < 355:
+                return_events.append({
+                    "timestamp": time.time(),
+                    "direction": "up",
+                    "action": "roll",
+                    "simple": simple_events.get("up", "?")
+                })
+                
+            if orient["pitch"] > 5 and orient["pitch"] < 25:
+                return_events.append({
+                    "timestamp": time.time(),
+                    "direction": "right",
+                    "action": "pitch",
+                    "simple": simple_events.get("right", "?")
+                })
+            elif orient["pitch"] > 340 and orient["pitch"] < 355:
+                return_events.append({
+                    "timestamp": time.time(),
+                    "direction": "left",
+                    "action": "pitch",
+                    "simple": simple_events.get("left", "?")
+                })
+                
+        return return_events         
 
 class cckkSenseHatEmu:
     """Class for SenseHat emulator"""
@@ -816,9 +883,30 @@ class cckkSenseHatEmu:
         """Contructs a cckkSenseHatEmu object"""
         self._x = None
         
+    def get_humidity(self):
+        return 50.0
+    
+    def get_temperature(self):
+        return 20.0
+    
+    def get_pressure(self):
+        return 1013.25
+
     def get_orientation(self):
         return {"pitch": 0, "roll": 0, "yaw": 0}
+    
+    def createInputEvent(self, timestamp=None, direction="up", action="pressed"):
+        """Create a SenseHat emulator InputEvent event
 
+        Returns:
+            dict: Event dictionary
+        """
+        # direction - The direction the joystick was moved, as a string ("up", "down", "left", "right", "middle")
+        # action - The action that occurred, as a string ("pressed", "released", "held")
+        _timestamp = timestamp if timestamp is not None else time.time()
+        return {"timestamp ": _timestamp, "direction": direction, "action": action}
+
+    
 
 if __name__ == '__main__':
     print("cckk module")
