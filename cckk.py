@@ -898,16 +898,16 @@ class cckkSenseHat:
             if orient["pitch"] > 5 and orient["pitch"] < 25:
                 return_events.append({
                     "timestamp": time.time(),
-                    "direction": "right",
+                    "direction": "left",
                     "action": "pitch",
-                    "simple": simple_events.get("right", "?")
+                    "simple": simple_events.get("left", "?")
                 })
             elif orient["pitch"] > 340 and orient["pitch"] < 355:
                 return_events.append({
                     "timestamp": time.time(),
-                    "direction": "left",
+                    "direction": "right",
                     "action": "pitch",
-                    "simple": simple_events.get("left", "?")
+                    "simple": simple_events.get("right", "?")
                 })
                 
         return return_events         
