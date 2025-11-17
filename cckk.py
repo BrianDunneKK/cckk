@@ -805,6 +805,15 @@ class cckkSenseHat:
         """Contructs a cckkSenseHat object"""
         self._sense = None
         
+    @property
+    def sense(self):
+        """SenseHat object"""
+        return self._sense
+    
+    @sense.setter
+    def sense(self, sense_hat):
+        self.setSenseHat(sense_hat)
+    
     def setSenseHat(self, sense_hat):
         """Associate SenHat object
 
@@ -823,6 +832,33 @@ class cckkSenseHat:
 
         self._sense = sense_hat
         
+    def setViewer(self, viewer):
+        """Set the SenseHat LED matrix from a cckkViewer object
+
+        Args:
+            viewer (cckkViewer): cckkViewer object
+        Raises:
+            Exception: Invalid cckkViewer object provided
+        """
+        if not isinstance(viewer, cckkViewer):
+            raise Exception("A cckkViewer object must be provided")
+        
+        self._viewer = viewer
+        self.updateViewer()
+        
+    def updateViewer(self):
+        """Update the SenseHat LED matrix from a cckkViewer object"""
+        self._sense.clear()
+        self._sense.set_pixels(self._viewer.pixels)
+
+    @property
+    def viewer(self):
+        """cckkViewer object associated with the SenseHat"""
+        return self._viewer
+    
+    @viewer.setter
+    def viewer(self, viewer):
+        self.setViewer(viewer)  
         
     def getInputs(self, inc_orientation=True):
         events = self._sense.stick.get_events()
