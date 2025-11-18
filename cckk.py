@@ -941,7 +941,7 @@ class cckkSenseHat:
                     "action": "roll",
                     "value": orient["roll"],
                     "scaled_value": min(5,round(orient["roll"] / gyro_sensitivity)), # 1-5
-                    "simple": simple_events.get("down", "?")
+                    "simple": simple_events.get("down", "?"),
                     "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0)),
                     "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[0],
                     "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[1]
@@ -953,7 +953,7 @@ class cckkSenseHat:
                     "action": "roll",
                     "value": orient["roll"],
                     "scaled_value": min(5, round((360 - orient["roll"]) / gyro_sensitivity)), # 1-5
-                    "simple": simple_events.get("up", "?")
+                    "simple": simple_events.get("up", "?"),
                     "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0)),
                     "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[0],
                     "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[1]
@@ -966,7 +966,7 @@ class cckkSenseHat:
                     "action": "pitch",
                     "value": orient["pitch"],
                     "scaled_value": min(5, round(orient["pitch"] / gyro_sensitivity)), # 1-5
-                    "simple": simple_events.get("left", "?")
+                    "simple": simple_events.get("left", "?"),
                     "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0)),
                     "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[0],
                     "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[1]
@@ -978,7 +978,7 @@ class cckkSenseHat:
                     "action": "pitch",
                     "value": orient["pitch"],
                     "scaled_value": min(5, round((360 - orient["pitch"]) / gyro_sensitivity)), # 1-5
-                    "simple": simple_events.get("right", "?")
+                    "simple": simple_events.get("right", "?"),
                     "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0)),
                     "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[0],
                     "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[1]
