@@ -933,56 +933,31 @@ class cckkSenseHat:
                     })
                     
         if inc_orientation:
+            def _create_orientation_event(direction, action, value):
+                simple = simple_events.get(direction, "?")
+                dx_dy = dxdy_map.get(simple, (0,0))
+                return {
+                    "timestamp": time.time(),
+                    "direction": direction,
+                    "action": action,
+                    "value": value,
+                    "scaled_value": min(5,round(orient["roll"] / gyro_sensitivity)) if value<180 else min(5, round((360 - orient["roll"]) / gyro_sensitivity)), # 1-5
+                    "simple": simple,
+                    "dx_dy": dx_dy,
+                    "dx": dx_dy[0],
+                    "dy": dx_dy[1]
+                }
+                
             orient = self._sense.get_orientation()
             if orient["roll"] > gyro_sensitivity and orient["roll"] < (gyro_sensitivity*10):
-                return_events.append({
-                    "timestamp": time.time(),
-                    "direction": "down",
-                    "action": "roll",
-                    "value": orient["roll"],
-                    "scaled_value": min(5,round(orient["roll"] / gyro_sensitivity)), # 1-5
-                    "simple": simple_events.get("down", "?"),
-                    "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0)),
-                    "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[0],
-                    "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[1]
-                })
+                return_events.append(_create_orientation_event("down", "roll", orient["roll"]))
             elif orient["roll"] > (360 - gyro_sensitivity*10) and orient["roll"] < (360 - gyro_sensitivity):
-                return_events.append({
-                    "timestamp": time.time(),
-                    "direction": "up",
-                    "action": "roll",
-                    "value": orient["roll"],
-                    "scaled_value": min(5, round((360 - orient["roll"]) / gyro_sensitivity)), # 1-5
-                    "simple": simple_events.get("up", "?"),
-                    "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0)),
-                    "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[0],
-                    "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[1]
-                })
+                return_events.append(_create_orientation_event("up", "roll", orient["roll"]))
                 
             if orient["pitch"] > gyro_sensitivity and orient["pitch"] < (gyro_sensitivity*10):
-                return_events.append({
-                    "timestamp": time.time(),
-                    "direction": "left",
-                    "action": "pitch",
-                    "value": orient["pitch"],
-                    "scaled_value": min(5, round(orient["pitch"] / gyro_sensitivity)), # 1-5
-                    "simple": simple_events.get("left", "?"),
-                    "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0)),
-                    "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[0],
-                    "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[1]
-                })
+                return_events.append(_create_orientation_event("left", "pitch", orient["pitch"]))
             elif orient["pitch"] > (360 - gyro_sensitivity*10) and orient["pitch"] < 355:
-                return_events.append({
-                    "timestamp": time.time(),
-                    "direction": "right",
-                    "action": "pitch",
-                    "value": orient["pitch"],
-                    "scaled_value": min(5, round((360 - orient["pitch"]) / gyro_sensitivity)), # 1-5
-                    "simple": simple_events.get("right", "?"),
-                    "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0)),
-                    "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[0],
-                    "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[1]
-                })
+                return_events.append(_create_orientation_event("right", "pitch", orient["pitch"]))
                 
         return return_events         
 
