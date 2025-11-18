@@ -379,6 +379,24 @@ class cckkViewer(cckkRectangle):
         else:
             return 0
 
+    def overlap_string(self, img1_name, img2_name, colour_dict=None):
+        """Get a string representation of the overlapping area between two images in the viewer
+
+        Args:
+        img1_name: Name of the first image
+        img2_name: Name of the second image
+        colour_dict: Dictionary mapping pixel colours to characters.
+
+        Returns:
+        String representation of the overlapping area
+        """
+        idx1 = self.find_image(img1_name)
+        idx2 = self.find_image(img2_name)
+        if idx1 >= 0 and idx2 >= 0:
+            return self._images[idx1].overlap_string(self._images[idx2], colour_dict)
+        else:
+            return ""
+
     def exportAsString(self, colour_dict=None):
         """Export the viewer's current view as a string representation
 
@@ -795,6 +813,22 @@ class cckkImage(cckkRectangle):
                         if pixel_self is not None and pixel_other is not None:
                             pixel_count += 1
         return pixel_count
+
+    def overlap_string(self, other_img, colour_dict=None):
+        """Get a string representation of the overlapping area with another image
+
+        Args:
+        other_img: cckkImage object representing the other image
+        colour_dict: Dictionary mapping pixel colours to characters. If None, uses the default colour dictionary.
+
+        Returns:
+        String representation of the overlapping area
+        """
+        img = self.overlap(other_img)
+        if img is None:
+            return ""
+        else:
+            return img.exportAsString(colour_dict)
 
     def str(self):
         as_str = "cckkImage:\n"
