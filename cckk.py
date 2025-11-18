@@ -860,7 +860,7 @@ class cckkSenseHat:
     def viewer(self, viewer):
         self.setViewer(viewer)  
         
-    def getInputs(self, inc_orientation=True):
+    def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=5):
         events = self._sense.stick.get_events()
         return_events = []
         simple_events = {
@@ -870,43 +870,53 @@ class cckkSenseHat:
             "down": "D",
             "middle": "M"
         }
-        for event in events:
-            if event.action in ["pressed", "held"]:
-                return_events.append({
-                    "timestamp": event.timestamp,
-                    "direction": event.direction,
-                    "action": event.action,
-                    "simple": simple_events.get(event.direction, "?")
-                })
+        if inc_joystick:
+            for event in events:
+                if event.action in ["pressed", "held"]:
+                    return_events.append({
+                        "timestamp": event.timestamp,
+                        "direction": event.direction,
+                        "action": event.action,
+                        "simple": simple_events.get(event.direction, "?")
+                    })
+                    
         if inc_orientation:
             orient = self._sense.get_orientation()
-            if orient["roll"] > 5 and orient["roll"] < 25:
+            if orient["roll"] > gyro_sensitivity and orient["roll"] < (gyro_sensitivity*10):
                 return_events.append({
                     "timestamp": time.time(),
                     "direction": "down",
                     "action": "roll",
+                    "value": orient["roll"],
+                    "scaled_value": min(5,round(orient["roll"] / gyro_sensitivity)), # 1-5
                     "simple": simple_events.get("down", "?")
                 })
-            elif orient["roll"] > 340 and orient["roll"] < 355:
+            elif orient["roll"] > (360 - gyro_sensitivity*10) and orient["roll"] < (360 - gyro_sensitivity):
                 return_events.append({
                     "timestamp": time.time(),
                     "direction": "up",
                     "action": "roll",
+                    "value": orient["roll"],
+                    "scaled_value": min(5, round((360 - orient["roll"]) / gyro_sensitivity)), # 1-5
                     "simple": simple_events.get("up", "?")
                 })
                 
-            if orient["pitch"] > 5 and orient["pitch"] < 25:
+            if orient["pitch"] > gyro_sensitivity and orient["pitch"] < (gyro_sensitivity*10):
                 return_events.append({
                     "timestamp": time.time(),
                     "direction": "left",
                     "action": "pitch",
+                    "value": orient["pitch"],
+                    "scaled_value": min(5, round(orient["pitch"] / gyro_sensitivity)), # 1-5
                     "simple": simple_events.get("left", "?")
                 })
-            elif orient["pitch"] > 340 and orient["pitch"] < 355:
+            elif orient["pitch"] > (360 - gyro_sensitivity*10) and orient["pitch"] < 355:
                 return_events.append({
                     "timestamp": time.time(),
                     "direction": "right",
                     "action": "pitch",
+                    "value": orient["pitch"],
+                    "scaled_value": min(5, round((360 - orient["pitch"]) / gyro_sensitivity)), # 1-5
                     "simple": simple_events.get("right", "?")
                 })
                 
