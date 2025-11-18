@@ -1,6 +1,7 @@
 import copy
 import time
 
+
 class cckkRectangle:
     def __init__(self, xcols=0, yrows=0, xpos=0, ypos=0):
         """Contructs a cckkRectangle object.
@@ -59,7 +60,7 @@ class cckkRectangle:
     def ypos(self, value):
         self._ypos = value
 
-    def __eq__(self, other): 
+    def __eq__(self, other):
         if not isinstance(other, cckkRectangle):
             # Don't attempt to compare against unrelated types
             return NotImplemented
@@ -112,8 +113,10 @@ class cckkRectangle:
         """
         inter_xpos = max(self.xpos, other_rect.xpos)
         inter_ypos = max(self.ypos, other_rect.ypos)
-        inter_xend = min(self.xpos + self.xcols, other_rect.xpos + other_rect.xcols)
-        inter_yend = min(self.ypos + self.yrows, other_rect.ypos + other_rect.yrows)
+        inter_xend = min(self.xpos + self.xcols,
+                         other_rect.xpos + other_rect.xcols)
+        inter_yend = min(self.ypos + self.yrows,
+                         other_rect.ypos + other_rect.yrows)
 
         if inter_xend > inter_xpos and inter_yend > inter_ypos:
             return cckkRectangle(
@@ -143,7 +146,7 @@ class cckkRectangle:
 
 
 class cckkViewer(cckkRectangle):
-    ## Class representation of a viewer of images for display on a SenseHat
+    # Class representation of a viewer of images for display on a SenseHat
     # The viewer represents the view area through which an image is seen. This view can be displayed on a SenseHat LED matrix.
     # The viewer can contain multiple images, which are layered on top of each other.
     # The base class cckkRectangle is used to represent the viewer size and position.
@@ -177,9 +180,10 @@ class cckkViewer(cckkRectangle):
         self._mer_rect = cckkRectangle()  # Minimum enclosing rectangle of the images
         self._images = (
             []
-        )  # List of cckkImage objects that are viewed through the viewer. First image in the list is at the *back*.
+            # List of cckkImage objects that are viewed through the viewer. First image in the list is at the *back*.
+        )
         self.add_images(images)
-        
+
         if horiz is not None or vert is not None:
             self.align_images(horiz, vert)
 
@@ -221,7 +225,8 @@ class cckkViewer(cckkRectangle):
             img_idx = 0
 
         if len(self._images) == 0 or img_idx < 0 or img_idx >= len(self._images):
-            raise Exception("No images in viewer or invalid image index specified")
+            raise Exception(
+                "No images in viewer or invalid image index specified")
 
         img = self._images[img_idx]
 
@@ -325,7 +330,8 @@ class cckkViewer(cckkRectangle):
     def moveTo_img(self, name, xpos, ypos, keep=False):
         idx = self.find_image(name)
         if idx >= 0:
-            self._images[idx].moveTo(xpos, ypos, self._mer_rect if keep else None)
+            self._images[idx].moveTo(
+                xpos, ypos, self._mer_rect if keep else None)
         return self
 
     def move_img(self, name, dx, dy, keep=False):
@@ -344,7 +350,7 @@ class cckkViewer(cckkRectangle):
         for img in self._images:
             img.align(self, horiz, vert)
         return self
-    
+
     def overlap(self, img1_name, img2_name):
         """Calculate the intersection of two images in the viewer
 
@@ -419,7 +425,7 @@ class cckkViewer(cckkRectangle):
 
 
 class cckkImage(cckkRectangle):
-    ## Class representation of an image
+    # Class representation of an image
     # The base class cckkRectangle is used to represent the image size and position.
     ##############################################################################################
 
@@ -498,7 +504,8 @@ class cckkImage(cckkRectangle):
             self.createFromImageFile(imgFile)
 
     def createFromArray(self, imgA, img_cols=8):
-        self._imgAA = [imgA[i : i + img_cols] for i in range(0, len(imgA), img_cols)]
+        self._imgAA = [imgA[i: i + img_cols]
+                       for i in range(0, len(imgA), img_cols)]
         self.update_size()
         return self
 
@@ -561,7 +568,7 @@ class cckkImage(cckkRectangle):
         self.createFromArray(imgA, img_cols)
         return self
 
-    def createFromPixel(self, xcols, yrows, pixel = None):
+    def createFromPixel(self, xcols, yrows, pixel=None):
         """Create an image of the specified size and pixel colour
 
         Args:
@@ -601,14 +608,16 @@ class cckkImage(cckkRectangle):
         elif horiz.upper() == "R":
             self.xpos = viewer_rect.xpos + viewer_rect.xcols - self.xcols
         elif horiz.upper() == "C":
-            self.xpos = viewer_rect.xpos + int((viewer_rect.xcols - self.xcols) / 2)
+            self.xpos = viewer_rect.xpos + \
+                int((viewer_rect.xcols - self.xcols) / 2)
 
         if vert.upper() == "T":
             self.ypos = viewer_rect.ypos
         elif vert.upper() == "B":
             self.ypos = viewer_rect.ypos + viewer_rect.yrows - self.yrows
         elif vert.upper() == "C":
-            self.ypos = viewer_rect.ypos + int((viewer_rect.yrows - self.yrows) / 2)
+            self.ypos = viewer_rect.ypos + \
+                int((viewer_rect.yrows - self.yrows) / 2)
 
         return self
 
@@ -641,9 +650,9 @@ class cckkImage(cckkRectangle):
         Returns:
         Pixel value as a list containing [R, G, B] (red, green, blue)
         """
-        return self._imgAA[self.yrows-y-1][x] # Access from bottom-left (0,0)
+        return self._imgAA[self.yrows-y-1][x]  # Access from bottom-left (0,0)
 
-    def setPixel(self, x, y, pixel = None):
+    def setPixel(self, x, y, pixel=None):
         """Set the pixel at the specified position
 
         Args:
@@ -669,7 +678,7 @@ class cckkImage(cckkRectangle):
         Pixel value as a character
         """
         return cckkImage.rgbAsString(self.getPixel(x, y), colour_dict)
-        
+
     def getSubImage(self, sub_rect):
         """Get a sub-image from the image
 
@@ -688,7 +697,8 @@ class cckkImage(cckkRectangle):
                 if 0 <= x_img < self.xcols and 0 <= y_img < self.yrows:
                     row_pixels.append(self.getPixel(x_img, y_img))
                 else:
-                    row_pixels.append(None)  # Transparent pixel if out of bounds
+                    # Transparent pixel if out of bounds
+                    row_pixels.append(None)
             sub_imgAA.append(row_pixels)
         sub_img = cckkImage(imgAA=sub_imgAA)
         sub_img.xpos = sub_rect.xpos
@@ -710,7 +720,7 @@ class cckkImage(cckkRectangle):
         self.ypos = ypos
         self.keep_within(keep_rect)
         return self
-    
+
     def move(self, dx, dy, keep_rect=None):
         """Move the image (relative to the viewer)
 
@@ -767,15 +777,19 @@ class cckkImage(cckkRectangle):
                     ):
                         pixel_self = self.getPixel(x_self, y_self)
                         if top_only:
-                            row_pixels.append(pixel_self)  # Take the pixel from this image
+                            # Take the pixel from this image
+                            row_pixels.append(pixel_self)
                         else:
                             pixel_other = other_img.getPixel(x_other, y_other)
                             if pixel_self is not None:
-                                row_pixels.append(pixel_self)  # Take the pixel from this image
+                                # Take the pixel from this image
+                                row_pixels.append(pixel_self)
                             else:
-                                row_pixels.append(pixel_other)  # Take the pixel from the other image
+                                # Take the pixel from the other image
+                                row_pixels.append(pixel_other)
                     else:
-                        raise Exception("Pixel incorrectly out of bounds during intersection calculation")
+                        raise Exception(
+                            "Pixel incorrectly out of bounds during intersection calculation")
                 inter_imgAA.append(row_pixels)
             inter_img = cckkImage(imgAA=inter_imgAA)
             inter_img.xpos = inter_rect.xpos
@@ -846,16 +860,16 @@ class cckkSenseHat:
     def __init__(self):
         """Contructs a cckkSenseHat object"""
         self._sense = None
-        
+
     @property
     def sense(self):
         """SenseHat object"""
         return self._sense
-    
+
     @sense.setter
     def sense(self, sense_hat):
         self.setSenseHat(sense_hat)
-    
+
     def setSenseHat(self, sense_hat):
         """Associate SenHat object
 
@@ -867,13 +881,13 @@ class cckkSenseHat:
         """
         if sense_hat is None:
             raise Exception("A SenseHat object must be provided")
-        
+
         get_orientation = getattr(sense_hat, "get_orientation", None)
         if get_orientation is None or not callable(sense_hat.get_orientation):
             raise Exception("A SenseHat object must be provided")
 
         self._sense = sense_hat
-        
+
     def setViewer(self, viewer):
         """Set the SenseHat LED matrix from a cckkViewer object
 
@@ -884,10 +898,10 @@ class cckkSenseHat:
         """
         if not isinstance(viewer, cckkViewer):
             raise Exception("A cckkViewer object must be provided")
-        
+
         self._viewer = viewer
         self.updateViewer()
-        
+
     def updateViewer(self):
         """Update the SenseHat LED matrix from a cckkViewer object"""
         self._sense.clear()
@@ -897,11 +911,11 @@ class cckkSenseHat:
     def viewer(self):
         """cckkViewer object associated with the SenseHat"""
         return self._viewer
-    
+
     @viewer.setter
     def viewer(self, viewer):
-        self.setViewer(viewer)  
-        
+        self.setViewer(viewer)
+
     def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=5):
         events = self._sense.stick.get_events()
         return_events = []
@@ -918,7 +932,7 @@ class cckkSenseHat:
             "U": (0, 1),
             "D": (0, -1)
         }
-        
+
         if inc_joystick:
             for event in events:
                 if event.action in ["pressed", "held"]:
@@ -927,39 +941,45 @@ class cckkSenseHat:
                         "direction": event.direction,
                         "action": event.action,
                         "simple": simple_events.get(event.direction, "?"),
-                        "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0)),
-                        "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[0],
-                        "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0,0))[1]
+                        "dx_dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0, 0)),
+                        "dx": dxdy_map.get(simple_events.get(event.direction, "?"), (0, 0))[0],
+                        "dy": dxdy_map.get(simple_events.get(event.direction, "?"), (0, 0))[1]
                     })
-                    
+
         if inc_orientation:
             def _create_orientation_event(direction, action, value):
                 simple = simple_events.get(direction, "?")
-                dx_dy = dxdy_map.get(simple, (0,0))
+                dx_dy = dxdy_map.get(simple, (0, 0))
                 return {
                     "timestamp": time.time(),
                     "direction": direction,
                     "action": action,
                     "value": value,
-                    "scaled_value": min(5,round(orient["roll"] / gyro_sensitivity)) if value<180 else min(5, round((360 - orient["roll"]) / gyro_sensitivity)), # 1-5
+                    # 1-5
+                    "scaled_value": min(5, round(value / gyro_sensitivity)) if value < 180 else min(5, round((360 - value) / gyro_sensitivity)),
                     "simple": simple,
                     "dx_dy": dx_dy,
                     "dx": dx_dy[0],
                     "dy": dx_dy[1]
                 }
-                
+
             orient = self._sense.get_orientation()
             if orient["roll"] > gyro_sensitivity and orient["roll"] < (gyro_sensitivity*10):
-                return_events.append(_create_orientation_event("down", "roll", orient["roll"]))
+                return_events.append(_create_orientation_event(
+                    "down", "roll", orient["roll"]))
             elif orient["roll"] > (360 - gyro_sensitivity*10) and orient["roll"] < (360 - gyro_sensitivity):
-                return_events.append(_create_orientation_event("up", "roll", orient["roll"]))
-                
+                return_events.append(_create_orientation_event(
+                    "up", "roll", orient["roll"]))
+
             if orient["pitch"] > gyro_sensitivity and orient["pitch"] < (gyro_sensitivity*10):
-                return_events.append(_create_orientation_event("left", "pitch", orient["pitch"]))
+                return_events.append(_create_orientation_event(
+                    "left", "pitch", orient["pitch"]))
             elif orient["pitch"] > (360 - gyro_sensitivity*10) and orient["pitch"] < 355:
-                return_events.append(_create_orientation_event("right", "pitch", orient["pitch"]))
-                
-        return return_events         
+                return_events.append(_create_orientation_event(
+                    "right", "pitch", orient["pitch"]))
+
+        return return_events
+
 
 class cckkSenseHatEmu:
     """Class for SenseHat emulator"""
@@ -967,19 +987,19 @@ class cckkSenseHatEmu:
     def __init__(self):
         """Contructs a cckkSenseHatEmu object"""
         self._x = None
-        
+
     def get_humidity(self):
         return 50.0
-    
+
     def get_temperature(self):
         return 20.0
-    
+
     def get_pressure(self):
         return 1013.25
 
     def get_orientation(self):
         return {"pitch": 0, "roll": 0, "yaw": 0}
-    
+
     def createInputEvent(self, timestamp=None, direction="up", action="pressed"):
         """Create a SenseHat emulator InputEvent event
 
@@ -991,7 +1011,6 @@ class cckkSenseHatEmu:
         _timestamp = timestamp if timestamp is not None else time.time()
         return {"timestamp ": _timestamp, "direction": direction, "action": action}
 
-    
 
 if __name__ == '__main__':
     print("cckk module")
