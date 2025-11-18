@@ -151,7 +151,7 @@ class cckkViewer(cckkRectangle):
 
     """Class representation of a viewer of images for display on a SenseHat"""
 
-    def __init__(self, xcols=8, yrows=8, xpos=0, ypos=0, fill=(0, 0, 0), images=[]):
+    def __init__(self, xcols=8, yrows=8, xpos=0, ypos=0, fill=(0, 0, 0), images=[], horiz=None, vert=None):
         """Contructs a cckkViewer object.
         The viewer represents the view area through which an image is seen. This view can be displayed on a SenseHat LED matrix.
 
@@ -179,6 +179,9 @@ class cckkViewer(cckkRectangle):
             []
         )  # List of cckkImage objects that are viewed through the viewer. First image in the list is at the *back*.
         self.add_images(images)
+        
+        if horiz is not None or vert is not None:
+            self.align_images(horiz, vert)
 
     @property
     def background(self):
@@ -337,6 +340,11 @@ class cckkViewer(cckkRectangle):
             self._images[idx].align(self, horiz, vert)
         return self
 
+    def align_images(self, horiz="C", vert="C"):
+        for img in self._images:
+            img.align(self, horiz, vert)
+        return self
+    
     def overlap(self, img1_name, img2_name):
         """Calculate the intersection of two images in the viewer
 
@@ -574,14 +582,14 @@ class cckkImage(cckkRectangle):
             self.xpos = viewer_rect.xpos
         elif horiz.upper() == "R":
             self.xpos = viewer_rect.xpos + viewer_rect.xcols - self.xcols
-        else:
+        elif horiz.upper() == "C":
             self.xpos = viewer_rect.xpos + int((viewer_rect.xcols - self.xcols) / 2)
 
         if vert.upper() == "T":
             self.ypos = viewer_rect.ypos
         elif vert.upper() == "B":
             self.ypos = viewer_rect.ypos + viewer_rect.yrows - self.yrows
-        else:
+        elif vert.upper() == "C":
             self.ypos = viewer_rect.ypos + int((viewer_rect.yrows - self.yrows) / 2)
 
         return self
