@@ -35,7 +35,29 @@ rgbcymxw"""
         viewer = cckkViewer(images=[img], xcols=4, yrows=4, fill=violet)  # Violet background ("v")
         img_view = viewer.view()
         view_str = "vvvv\nrgbv\ncymv\nxwvv"
-        self.assertTrue(img_view.exportAsString() == view_str)
+        self.assertEqual(img_view.exportAsString(), view_str)
+
+    def test_cckkViewer_layers(self):
+        imgr_str = "rrr\nrrr\nrrr"
+        imgg_str = ".gg\n.gg\n.gg"
+        imgb_str = "..b\n..b\n..b"
+        imgr = cckkImage(imgStr=imgr_str, name="red")
+        imgg = cckkImage(imgStr=imgg_str, name="green")
+        imgb = cckkImage(imgStr=imgb_str, name="blue")
+        viewer = cckkViewer(images=[imgb, imgg, imgr], xcols=3, yrows=3)
+        img_view = viewer.view()
+        view_str = "rgb\nrgb\nrgb"
+        self.assertEqual(img_view.exportAsString(), view_str)
+        
+        viewer.hide_image("green")
+        img_view = viewer.view()
+        view_str = "rrb\nrrb\nrrb"
+        self.assertEqual(img_view.exportAsString(), view_str)
+
+        viewer = cckkViewer(images=[imgg, imgr, imgb], xcols=3, yrows=3)
+        img_view = viewer.view()
+        view_str = "rgg\nrgg\nrgg"
+        self.assertEqual(img_view.exportAsString(), view_str)
 
     def test_cckkViewer_pixels(self):
         img_str = "rg.\n.cy\nxw."

@@ -1,3 +1,6 @@
+### To Do
+# - Complete overlap_below(). Add cckkImage.overlap_images([cckkImages])
+
 import copy
 import time
 
@@ -144,6 +147,33 @@ class cckkRectangle:
             )
         return mer
 
+class cckkLayer:
+    # Class representation of an image layer
+    _img_id: int
+    _img_name: str
+    visible: bool = True
+
+    def __init__(self, img_id: int, img_name: str, visible: bool = True):
+        self._img_id = img_id
+        self._img_name = img_name
+        self.visible = visible
+    
+    @property
+    def id(self):
+        return self._img_id
+    
+    @property
+    def name(self):
+        return self._img_name
+        
+    def show(self):
+        self.visible = True
+        return self
+        
+    def hide(self):
+        self.visible = False
+        return self
+
 
 class cckkViewer(cckkRectangle):
     # Class representation of a viewer of images for display on a SenseHat
@@ -164,7 +194,7 @@ class cckkViewer(cckkRectangle):
         xpos: X-position of the viewer
         ypos: Y-position of the viewer
         fill: Fill colour if the image does not fill the viewer
-        images: List of cckkImage objects that are viewed through the viewer, First image in the list is at the *front*, last image is at the back.
+        images: List of cckkImage objects that are viewed through the viewer, First image in the list is at the *back*.
 
         Returns:
         cckkViewer object
@@ -172,16 +202,12 @@ class cckkViewer(cckkRectangle):
         Raises:
         Exception: Never
         """
-        super().__init__(
-            xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos
-        )  # Initialize cckkRectangle base class
+        super().__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos)  # Initialize cckkRectangle base class
 
         self._fill = fill  # Fill colour if the image does not fill the viewer
         self._mer_rect = cckkRectangle()  # Minimum enclosing rectangle of the images
-        self._images = (
-            []
-            # List of cckkImage objects that are viewed through the viewer. First image in the list is at the *back*.
-        )
+        self._images = {} # Dictionary of cckkImage objects that are viewed through the viewer. The object keys are the object id().
+        self._layers = [] # Stack of cckkLayer objects representing image layers in the viewer. First layer in the list is at the *top*.
         self.add_images(images)
 
         if horiz is not None or vert is not None:
@@ -195,7 +221,7 @@ class cckkViewer(cckkRectangle):
         """Add images to the viewer
 
         Args:
-        images: List of cckkImage objects to view through the viewer. These are added on top of any existing images.
+        images: List of cckkImage objects to view through the viewer. These are added on top of any existing images. First image is topmost.
 
         Raises:
         Exception: If invalid image specified
@@ -203,8 +229,10 @@ class cckkViewer(cckkRectangle):
         for img in reversed(images):
             if not isinstance(img, cckkImage):
                 raise Exception("Invalid image specified")
-            self._images.append(img)
-        self._mer_rect = cckkRectangle.calculate_mer(self._images)
+            _id = id(img)
+            self._images[_id] = img
+            self._layers.insert(0, cckkLayer(img_id=_id, img_name=img.name, visible=True)) # Add new layers at the front
+        self._mer_rect = cckkRectangle.calculate_mer(self._images.values())
         return self
 
     def align(self, img_name="", horiz="C", vert="C"):
@@ -220,15 +248,14 @@ class cckkViewer(cckkRectangle):
         Raises:
         Exception: If no images in viewer or invalid image index specified
         """
-        img_idx = self.find_image(img_name)
-        if img_idx < 0:
-            img_idx = 0
+        img_id = self.find_image_id(img_name)
+        if img_id < 0:
+            img_id = 0
 
-        if len(self._images) == 0 or img_idx < 0 or img_idx >= len(self._images):
-            raise Exception(
-                "No images in viewer or invalid image index specified")
+        if len(self._images) == 0 or img_id < 0 or img_id >= len(self._images):
+            raise Exception("No images in viewer or invalid image index specified")
 
-        img = self._images[img_idx]
+        img = self._images[img_id]
 
         if horiz.upper() == "L":
             self.xpos = img.xpos
@@ -253,21 +280,23 @@ class cckkViewer(cckkRectangle):
         cckkImage object representing the view of the images through the viewer
         """
         view_img = cckkImage(imgA=self.background, img_cols=self.xcols)
-
-        for img in self._images:
-            for yrow in range(self.yrows):
-                for xcol in range(self.xcols):
-                    xcol_img = self.xpos + xcol - img.xpos
-                    yrow_img = self.ypos + yrow - img.ypos
-                    if (
-                        xcol_img >= 0
-                        and xcol_img < img.xcols
-                        and yrow_img >= 0
-                        and yrow_img < img.yrows
-                    ):
-                        img_pixel = img.getPixel(xcol_img, yrow_img)
-                        if img_pixel is not None:
-                            view_img.setPixel(xcol, yrow, pixel=img_pixel)
+        
+        for layer in reversed(self._layers): # Start with the bottom layer and paint each one on top
+            if layer.visible:
+                img = self._images[layer.id]
+                for yrow in range(self.yrows):
+                    for xcol in range(self.xcols):
+                        xcol_img = self.xpos + xcol - img.xpos
+                        yrow_img = self.ypos + yrow - img.ypos
+                        if (
+                            xcol_img >= 0
+                            and xcol_img < img.xcols
+                            and yrow_img >= 0
+                            and yrow_img < img.yrows
+                        ):
+                            img_pixel = img.getPixel(xcol_img, yrow_img)
+                            if img_pixel is not None:
+                                view_img.setPixel(xcol, yrow, pixel=img_pixel)
         return view_img
 
     @property
@@ -312,36 +341,56 @@ class cckkViewer(cckkRectangle):
             self.keep_within(self._mer_rect)
 
         return self.view()
+    
+    def _find_layer(self, name):
+        """Find a image layer in the viewer by name
 
-    def find_image(self, name):
+        Args:
+        name: Name of the image layer to find
+
+        Returns:
+        cckkLayer representing the layer, or None if not found
+        """
+        for layer in self._layers:
+            if layer.name == name:
+                return layer
+        return None
+
+    def find_image_id(self, name):
         """Find an image in the viewer by name
 
         Args:
         name: Name of the image to find
 
         Returns:
-        Index of the image in the viewer's image list, or -1 if not found
+        ID of the image in the viewer's image list, or -1 if not found
         """
-        for idx, img in enumerate(self._images):
-            if img._name == name:
-                return idx
-        return -1
+        layer = self._find_layer(name)
+        if layer is None:
+            return -1
+        else:
+            return layer.id
+
+    def hide_image(self, name):
+        for layer in self._layers:
+            if layer.name == name:
+                layer.hide()
 
     def moveTo_img(self, name, xpos, ypos, keep=False):
-        idx = self.find_image(name)
+        idx = self.find_image_id(name)
         if idx >= 0:
             self._images[idx].moveTo(
                 xpos, ypos, self._mer_rect if keep else None)
         return self
 
     def move_img(self, name, dx, dy, keep=False):
-        idx = self.find_image(name)
+        idx = self.find_image_id(name)
         if idx >= 0:
             self._images[idx].move(dx, dy, self._mer_rect if keep else None)
         return self
 
     def align_image(self, name, horiz="C", vert="C"):
-        idx = self.find_image(name)
+        idx = self.find_image_id(name)
         if idx >= 0:
             self._images[idx].align(self, horiz, vert)
         return self
@@ -361,8 +410,8 @@ class cckkViewer(cckkRectangle):
         Returns:
         cckkImage object representing the overlapping image, or None if there is no overlap. Pixels are taken from the first image.
         """
-        idx1 = self.find_image(img1_name)
-        idx2 = self.find_image(img2_name)
+        idx1 = self.find_image_id(img1_name)
+        idx2 = self.find_image_id(img2_name)
         if idx1 >= 0 and idx2 >= 0:
             return self._images[idx1].overlap(self._images[idx2])
         else:
@@ -378,8 +427,8 @@ class cckkViewer(cckkRectangle):
         Returns:
         Number of pixels that overlap between the two images
         """
-        idx1 = self.find_image(img1_name)
-        idx2 = self.find_image(img2_name)
+        idx1 = self.find_image_id(img1_name)
+        idx2 = self.find_image_id(img2_name)
         if idx1 >= 0 and idx2 >= 0:
             return self._images[idx1].overlap_count(self._images[idx2])
         else:
@@ -396,12 +445,33 @@ class cckkViewer(cckkRectangle):
         Returns:
         String representation of the overlapping area
         """
-        idx1 = self.find_image(img1_name)
-        idx2 = self.find_image(img2_name)
+        idx1 = self.find_image_id(img1_name)
+        idx2 = self.find_image_id(img2_name)
         if idx1 >= 0 and idx2 >= 0:
             return self._images[idx1].overlap_string(self._images[idx2], colour_dict)
         else:
             return ""
+
+    def overlap_below(self, img_name):
+        """Calculate the intersection of this image with all images below it in the viewer
+
+        Args:
+        img_name: Name of the first image
+
+        Returns:
+        cckkImage object representing the overlapping image, or None if there is no overlap. Pixels are taken from the first image.
+        """
+        found = len(self._layers) + 1
+        found_id = None
+        img_overlap = None
+        for i, layer in enumerate(self._layers):
+            if layer.name == img_name:
+                found = i
+                found_id = layer.id
+            elif i == (found+1):
+                img_overlap = self._images[found_id].overlap(self._images[layer.id])
+
+        return None
 
     def exportAsString(self, colour_dict=None):
         """Export the viewer's current view as a string representation
@@ -627,6 +697,10 @@ class cckkImage(cckkRectangle):
         self.yrows = len(self._imgAA)
 
     @property
+    def name(self):
+        return self._name
+    
+    @property
     def image(self):
         """Copy of the full image"""
         return copy.deepcopy(self._imgAA)
@@ -846,6 +920,7 @@ class cckkImage(cckkRectangle):
 
     def str(self):
         as_str = "cckkImage:\n"
+        as_str = "  Name: \"" + self.name + "\"\n"
         as_str += "  " + super().str() + "\n"
         for row in self._imgAA:
             for pixel in row:
@@ -916,7 +991,7 @@ class cckkSenseHat:
     def viewer(self, viewer):
         self.setViewer(viewer)
 
-    def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=5):
+    def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=3):
         events = self._sense.stick.get_events()
         return_events = []
         simple_events = {
