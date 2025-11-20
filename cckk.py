@@ -1,4 +1,6 @@
 ### To Do
+# - Add to test_cckkViewer_overlap_with()
+# - Replace _find_image_id() with _find_image()
 # - Complete overlap_below(). Add cckkImage.overlap_multi([cckkImages])
 
 import copy
@@ -248,7 +250,7 @@ class cckkViewer(cckkRectangle):
         Raises:
         Exception: If no images in viewer or invalid image index specified
         """
-        img_id = self.find_image_id(img_name)
+        img_id = self._find_image_id(img_name)
         if img_id < 0:
             img_id = 0
 
@@ -280,7 +282,7 @@ class cckkViewer(cckkRectangle):
         cckkImage object representing the view of the images through the viewer
         """
         view_img = cckkImage(imgA=self.background, img_cols=self.xcols)
-        
+
         for layer in reversed(self._layers): # Start with the bottom layer and paint each one on top
             if layer.visible:
                 img = self._images[layer.id]
@@ -341,7 +343,7 @@ class cckkViewer(cckkRectangle):
             self.keep_within(self._mer_rect)
 
         return self.view()
-    
+
     def _find_layer(self, name):
         """Find a image layer in the viewer by name
 
@@ -356,7 +358,7 @@ class cckkViewer(cckkRectangle):
                 return layer
         return None
 
-    def find_image_id(self, name):
+    def _find_image_id(self, name):
         """Find an image in the viewer by name
 
         Args:
@@ -371,26 +373,67 @@ class cckkViewer(cckkRectangle):
         else:
             return layer.id
 
-    def hide_image(self, name):
+    def _find_image(self, name):
+        """Find an image in the viewer by name
+
+        Args:
+        name: Name of the image to find
+
+        Returns:
+        cckkImage object in the viewer's image list, or None if not found
+        """
+        idx = self._find_image_id(name)
+        if idx >= 0:
+            return self._images[idx]
+        else:
+            return None
+
+    def _find_images(self, name_list):
+        img_list = []
+        if name_list is not None:
+            for name in name_list:         
+                img = self._find_image(name)
+                if img is not None:
+                    img_list.append(img)
+        return img_list
+    
+    def _find_below(self, name):
+        name_list = []
+        found = False
         for layer in self._layers:
             if layer.name == name:
-                layer.hide()
+                found = True
+            elif found == True:
+                name_list.append(layer.name)
 
+        return name_list
+
+    def hide_image(self, name):
+        layer = self._find_layer(name)
+        if layer is not None:
+            layer.hide()
+        return self
+
+    def show_image(self, name):
+        layer = self._find_layer(name)
+        if layer is not None:
+            layer.show()
+        return self
+               
     def moveTo_img(self, name, xpos, ypos, keep=False):
-        idx = self.find_image_id(name)
+        idx = self._find_image_id(name)
         if idx >= 0:
-            self._images[idx].moveTo(
-                xpos, ypos, self._mer_rect if keep else None)
+            self._images[idx].moveTo(xpos, ypos, self._mer_rect if keep else None)
         return self
 
     def move_img(self, name, dx, dy, keep=False):
-        idx = self.find_image_id(name)
+        idx = self._find_image_id(name)
         if idx >= 0:
             self._images[idx].move(dx, dy, self._mer_rect if keep else None)
         return self
 
     def align_image(self, name, horiz="C", vert="C"):
-        idx = self.find_image_id(name)
+        idx = self._find_image_id(name)
         if idx >= 0:
             self._images[idx].align(self, horiz, vert)
         return self
@@ -410,8 +453,8 @@ class cckkViewer(cckkRectangle):
         Returns:
         cckkImage object representing the overlapping image, or None if there is no overlap. Pixels are taken from the first image.
         """
-        idx1 = self.find_image_id(img1_name)
-        idx2 = self.find_image_id(img2_name)
+        idx1 = self._find_image_id(img1_name)
+        idx2 = self._find_image_id(img2_name)
         if idx1 >= 0 and idx2 >= 0:
             return self._images[idx1].overlap(self._images[idx2])
         else:
@@ -427,8 +470,8 @@ class cckkViewer(cckkRectangle):
         Returns:
         Number of pixels that overlap between the two images
         """
-        idx1 = self.find_image_id(img1_name)
-        idx2 = self.find_image_id(img2_name)
+        idx1 = self._find_image_id(img1_name)
+        idx2 = self._find_image_id(img2_name)
         if idx1 >= 0 and idx2 >= 0:
             return self._images[idx1].overlap_count(self._images[idx2])
         else:
@@ -445,33 +488,56 @@ class cckkViewer(cckkRectangle):
         Returns:
         String representation of the overlapping area
         """
-        idx1 = self.find_image_id(img1_name)
-        idx2 = self.find_image_id(img2_name)
+        idx1 = self._find_image_id(img1_name)
+        idx2 = self._find_image_id(img2_name)
         if idx1 >= 0 and idx2 >= 0:
             return self._images[idx1].overlap_string(self._images[idx2], colour_dict)
         else:
             return ""
 
-    def overlap_below(self, img_name):
-        """Calculate the intersection of this image with all images below it in the viewer
+    def overlap_multi(self, name, other_names = None):
+        """Calculate the overlap of one image with a stack of other images
 
         Args:
-        img_name: Name of the first image
+        name: Name of a cckkImage object name
+        other_names: Stack (list) of cckkImage object name
 
         Returns:
-        cckkImage object representing the overlapping image, or None if there is no overlap. Pixels are taken from the first image.
+        cckkImage object representing the intersection image, or None if there is no intersection
         """
-        found = len(self._layers) + 1
-        found_id = None
-        img_overlap = None
-        for i, layer in enumerate(self._layers):
-            if layer.name == img_name:
-                found = i
-                found_id = layer.id
-            elif i == (found+1):
-                img_overlap = self._images[found_id].overlap(self._images[layer.id])
+        img = self._find_image(name)
+        if img is None:
+            return None
 
-        return None
+        if other_names is None:
+            other_names = self._find_below(name)
+        other_imgs = self._find_images(other_names)
+        return img.overlap_multi(other_imgs)
+
+    def overlap_with(self, name, other_names = None):
+        """For an image, find the name of the first image in a stack of other images that intersects
+
+        Args:
+        name: Name of a cckkImage object name
+        other_names: Stack (list) of cckkImage object name
+
+        Returns:
+        Name of the first image in a stack of other images that intersects
+        """
+        img = self._find_image(name)
+        if img is None:
+            return None
+
+        if other_names is None:
+            other_names = self._find_below(name)
+        other_imgs = self._find_images(other_names)
+
+        found = None
+        for i, other_img in enumerate(other_imgs):
+            if found is None and img.overlap_count(other_img) > 0:
+                found = other_names[i]
+
+        return found
 
     def exportAsString(self, colour_dict=None):
         """Export the viewer's current view as a string representation

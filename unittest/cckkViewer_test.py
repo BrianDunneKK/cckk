@@ -70,5 +70,51 @@ rgbcymxw"""
         ]
         self.assertEqual(viewer.pixels, expected_pixels)
 
+    def test_cckkViewer_overlap_multi(self):
+        img1_str = "rgb\nc..\nxw."
+        imgt_str = "tt\ntt\ntt"
+        imgv_str = "vvv"
+        img1 = cckkImage(imgStr=img1_str, name="one")
+        imgt = cckkImage(imgStr=imgt_str, name = "turquoise")
+        imgv = cckkImage(imgStr=imgv_str, name = "violet")
+        viewer = cckkViewer(images=[img1, imgt, imgv], xcols=3, yrows=3)
+
+        img_1_tv_str = "rg.\nct.\nxwv"
+        img_1tv = viewer.overlap_multi("one", ["turquoise", "violet"])
+        self.assertEqual(img_1tv.exportAsString(), img_1_tv_str)
+
+        imgv.move(0,2)
+        img_1_tv_str = "rgb\nct.\nxw."
+        img_1tv = viewer.overlap_multi("one", ["turquoise", "violet"])
+        self.assertEqual(img_1tv.exportAsString(), img_1_tv_str)
+
+        img_1tv = viewer.overlap_multi("one")
+        self.assertEqual(img_1tv.exportAsString(), img_1_tv_str)
+
+        img_t_v_str = "tt"
+        img_t_v = viewer.overlap_multi("turquoise")
+        self.assertEqual(img_t_v.exportAsString(), img_t_v_str)
+
+        img_v = viewer.overlap_multi("violet")
+        self.assertEqual(img_v, None)
+
+
+    def test_cckkViewer_overlap_with(self):
+        img1_str = "rgb\nc..\nxw."
+        imgt_str = "tt\ntt\ntt"
+        imgv_str = "vvv"
+        img1 = cckkImage(imgStr=img1_str, name="one")
+        imgt = cckkImage(imgStr=imgt_str, name = "turquoise")
+        imgv = cckkImage(imgStr=imgv_str, name = "violet")
+        viewer = cckkViewer(images=[img1, imgt, imgv], xcols=3, yrows=3)
+
+        self.assertEqual(viewer.overlap_with("one", ["turquoise", "violet"]), "turquoise")
+        self.assertEqual(viewer.overlap_with("one"), "turquoise")
+        self.assertEqual(viewer.overlap_with("turquoise"), "violet")
+        self.assertEqual(viewer.overlap_with("violet"), None)
+
+
+
+
 if __name__ == "__main__":
     unittest.main()
