@@ -1,5 +1,5 @@
 ### To Do
-# - Complete overlap_below(). Add cckkImage.overlap_images([cckkImages])
+# - Complete overlap_below(). Add cckkImage.overlap_multi([cckkImages])
 
 import copy
 import time
@@ -882,14 +882,14 @@ class cckkImage(cckkRectangle):
         Number of pixels that overlap between the two images
         """
         pixel_count = 0
-        inter_rect = super().overlap(other_img)
-        if inter_rect is not None:
-            for yrow in reversed(range(inter_rect.yrows)):
-                for xcol in range(inter_rect.xcols):
-                    x_self = inter_rect.xpos + xcol - self.xpos
-                    y_self = inter_rect.ypos + yrow - self.ypos
-                    x_other = inter_rect.xpos + xcol - other_img.xpos
-                    y_other = inter_rect.ypos + yrow - other_img.ypos
+        overlap_rect = super().overlap(other_img)
+        if overlap_rect is not None:
+            for yrow in reversed(range(overlap_rect.yrows)):
+                for xcol in range(overlap_rect.xcols):
+                    x_self = overlap_rect.xpos + xcol - self.xpos
+                    y_self = overlap_rect.ypos + yrow - self.ypos
+                    x_other = overlap_rect.xpos + xcol - other_img.xpos
+                    y_other = overlap_rect.ypos + yrow - other_img.ypos
                     if (
                         0 <= x_self < self.xcols
                         and 0 <= y_self < self.yrows
@@ -917,6 +917,60 @@ class cckkImage(cckkRectangle):
             return ""
         else:
             return img.exportAsString(colour_dict)
+
+    def overlap_multi(self, other_imgs):
+        """Calculate the intersection of this image with a stack of other images
+
+        Args:
+        other_imgs: Stack (list) of cckkImage objects
+
+        Returns:
+        cckkImage object representing the intersection image, or None if there is no intersection
+        """
+        other_mer = cckkRectangle.calculate_mer(other_imgs)
+        overlap_rect = super().overlap(other_mer)
+        if overlap_rect is not None:
+            inter_imgAA = []
+            for yrow in reversed(range(overlap_rect.yrows)):
+                row_pixels = []
+                for xcol in range(overlap_rect.xcols):
+                    overlap_found = False
+                    for other_img in other_imgs:
+                        x_self = overlap_rect.xpos + xcol - self.xpos
+                        y_self = overlap_rect.ypos + yrow - self.ypos
+                        x_other = overlap_rect.xpos + xcol - other_img.xpos
+                        y_other = overlap_rect.ypos + yrow - other_img.ypos
+                        if (
+                            0 <= x_self < self.xcols
+                            and 0 <= y_self < self.yrows
+                            and 0 <= x_other < other_img.xcols
+                            and 0 <= y_other < other_img.yrows
+                            and not overlap_found
+                        ):
+                            pixel_self = self.getPixel(x_self, y_self)
+                            pixel_other = other_img.getPixel(x_other, y_other)
+                            if pixel_self is not None:
+                                # Take the pixel from this image
+                                row_pixels.append(pixel_self)
+                                overlap_found = True
+                            elif pixel_other is not None:
+                                # Take the pixel from the other image
+                                row_pixels.append(pixel_other)
+                                overlap_found = True
+                        else:
+                            pass # Multiple images so some may have no overlap
+
+                    if not overlap_found:
+                        row_pixels.append(None)
+                        
+                inter_imgAA.append(row_pixels)
+
+            inter_img = cckkImage(imgAA=inter_imgAA)
+            inter_img.xpos = overlap_rect.xpos
+            inter_img.ypos = overlap_rect.ypos
+            return inter_img
+        else:
+            return None
 
     def str(self):
         as_str = "cckkImage:\n"
@@ -991,7 +1045,7 @@ class cckkSenseHat:
     def viewer(self, viewer):
         self.setViewer(viewer)
 
-    def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=3):
+    def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=4):
         events = self._sense.stick.get_events()
         return_events = []
         simple_events = {

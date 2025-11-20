@@ -85,25 +85,42 @@ class test_cckkImage(unittest.TestCase):
         imgt_str = "rgb\nc..\nxw."  # Top image only
         img_overlap_b = img1.overlap(img2, top_only=False)
         img_overlap_t = img1.overlap(img2, top_only=True)
-        self.assertTrue(img_overlap_b.exportAsString() == imgb_str)
-        self.assertTrue(img_overlap_t.exportAsString() == imgt_str)
+        self.assertEqual(img_overlap_b.exportAsString(), imgb_str)
+        self.assertEqual(img_overlap_t.exportAsString(), imgt_str)
         
         img2.move(1,0)
         img_overlap12 = img1.overlap(img2)
         img_overlap21 = img2.overlap(img1)
-        self.assertTrue(img_overlap12.exportAsString() == "gb\ncy\nww")
-        self.assertTrue(img_overlap21.exportAsString() == "rg\ncy\nxw")
+        self.assertEqual(img_overlap12.exportAsString(), "gb\ncy\nww")
+        self.assertEqual(img_overlap21.exportAsString(), "rg\ncy\nxw")
 
         img2.move(0,1)
         img_overlap12 = img1.overlap(img2)
         img_overlap21 = img2.overlap(img1)
-        self.assertTrue(img_overlap12.exportAsString() == "gb\nxw")
+        self.assertEqual(img_overlap12.exportAsString(), "gb\nxw")
 
         img2.moveTo(-1,-1)
         img_overlap12 = img1.overlap(img2)
         img_overlap21 = img2.overlap(img1)
-        self.assertTrue(img_overlap12.exportAsString() == "cb\nxw")
-        self.assertTrue(img_overlap21.exportAsString() == "gb\nym")
+        self.assertEqual(img_overlap12.exportAsString(), "cb\nxw")
+        self.assertEqual(img_overlap21.exportAsString(), "gb\nym")
+
+    def test_cckkImage_overlap_multi(self):
+        img1_str = "rgb\nc..\nxw."
+        imgt_str = "tt\ntt\ntt"
+        imgv_str = "vvv"
+        img1 = cckkImage(imgStr=img1_str)
+        imgt = cckkImage(imgStr=imgt_str)
+        imgv = cckkImage(imgStr=imgv_str)
+        
+        img1_tv_str = "rg.\nct.\nxwv"
+        img1_tv = img1.overlap_multi([imgt, imgv])
+        self.assertEqual(img1_tv.exportAsString(), img1_tv_str)
+
+        imgv.move(0,2)
+        img1_tv_str = "rgb\nct.\nxw."
+        img1_tv = img1.overlap_multi([imgt, imgv])
+        self.assertEqual(img1_tv.exportAsString(), img1_tv_str)
 
 
 if __name__ == "__main__":
