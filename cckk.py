@@ -212,27 +212,18 @@ class cckkAction:
 
 class cckkCondition:
     # Class representation of condition impacting an action
-    def __init__(self, unless_overlap: [str] = None, only_if_overlap: bool = None,):
-        self._action = action
-        self._target = target
-        self._context = context
-        cckkAction._nextID += 1
-    
-    @property
-    def id(self):
-        return self._id
-    
-    @property
-    def action(self):
-        return self._action
-        
-    @property
-    def target(self):
-        return self._target
+    def __init__(self, unless_overlap: list[str] = None, only_if_overlap: list[str] = None):
+        self._unless_overlap = unless_overlap
+        self._only_if_overlap = only_if_overlap
 
     @property
-    def context(self):
-        return self._context
+    def only_if_overlap(self):
+        return self._only_if_overlap
+
+    @property
+    def only_if_overlap(self):
+        return self._only_if_overlap
+
 
 class cckkViewer(cckkRectangle):
     # Class representation of a viewer of images for display on a SenseHat
@@ -738,7 +729,7 @@ class cckkImage(cckkRectangle):
             self.createFromImageFile(imgFile)
 
         if pos is not None and len(pos) == 2:
-            x, y = pos
+            self.pos = pos
 
     def createFromArray(self, imgA, img_cols=8):
         self._imgAA = [imgA[i: i + img_cols]
