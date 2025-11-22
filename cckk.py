@@ -8,7 +8,7 @@ import time
 
 
 class cckkRectangle:
-    def __init__(self, xcols=0, yrows=0, xpos=0, ypos=0):
+    def __init__(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0):
         """Contructs a cckkRectangle object.
 
         Args:
@@ -25,11 +25,12 @@ class cckkRectangle:
         """
         self.set(xcols, yrows, xpos, ypos)
 
-    def set(self, xcols=0, yrows=0, xpos=0, ypos=0):
+    def set(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0) -> "cckkRectangle":
         self._xcols = xcols  # No. of columns in the rectangle
         self._yrows = yrows  # No. of rows in the rectangle
         self._xpos = xpos  # X-position of the rectangle
         self._ypos = ypos  # Y-position of the rectangle
+        return self
 
     @property
     def xcols(self):
@@ -37,7 +38,7 @@ class cckkRectangle:
         return self._xcols
 
     @xcols.setter
-    def xcols(self, value):
+    def xcols(self, value: int):
         self._xcols = value
 
     @property
@@ -46,7 +47,7 @@ class cckkRectangle:
         return self._yrows
 
     @yrows.setter
-    def yrows(self, value):
+    def yrows(self, value: int):
         self._yrows = value
 
     @property
@@ -70,11 +71,11 @@ class cckkRectangle:
         return (self.xpos, self.ypos)
 
     @pos.setter
-    def pos(self, value):
+    def pos(self, value: tuple[int, int]):
         self.xpos = value[0]
         self.ypos = value[1]
 
-    def __eq__(self, other):
+    def __eq__(self, other : object):
         if not isinstance(other, cckkRectangle):
             # Don't attempt to compare against unrelated types
             return NotImplemented
@@ -208,6 +209,30 @@ class cckkAction:
     def context(self):
         return self._context
 
+
+class cckkCondition:
+    # Class representation of condition impacting an action
+    def __init__(self, unless_overlap: [str] = None, only_if_overlap: bool = None,):
+        self._action = action
+        self._target = target
+        self._context = context
+        cckkAction._nextID += 1
+    
+    @property
+    def id(self):
+        return self._id
+    
+    @property
+    def action(self):
+        return self._action
+        
+    @property
+    def target(self):
+        return self._target
+
+    @property
+    def context(self):
+        return self._context
 
 class cckkViewer(cckkRectangle):
     # Class representation of a viewer of images for display on a SenseHat
