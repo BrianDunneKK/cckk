@@ -1,7 +1,7 @@
 ### To Do
-# - Add to test_cckkViewer_overlap_with()
+# = Add ActionID to undo()
+# - Add move_if() ... if not overlap
 # - Replace _find_image_id() with _find_image()
-# - Complete overlap_below(). Add cckkImage.overlap_multi([cckkImages])
 
 import copy
 import time
@@ -64,6 +64,15 @@ class cckkRectangle:
     @ypos.setter
     def ypos(self, value):
         self._ypos = value
+
+    @property
+    def pos(self):
+        return (self.xpos, self.ypos)
+
+    @pos.setter
+    def pos(self, value):
+        self.xpos = value[0]
+        self.ypos = value[1]
 
     def __eq__(self, other):
         if not isinstance(other, cckkRectangle):
@@ -151,10 +160,6 @@ class cckkRectangle:
 
 class cckkLayer:
     # Class representation of an image layer
-    _img_id: int
-    _img_name: str
-    visible: bool = True
-
     def __init__(self, img_id: int, img_name: str, visible: bool = True):
         self._img_id = img_id
         self._img_name = img_name
@@ -175,6 +180,33 @@ class cckkLayer:
     def hide(self):
         self.visible = False
         return self
+
+class cckkAction:
+    _nextID = 1
+
+    # Class representation of a viewer action
+    def __init__(self, action: str, target: str = None, context = None):
+        self._id = cckkAction._nextID
+        self._action = action
+        self._target = target
+        self._context = context
+        cckkAction._nextID += 1
+    
+    @property
+    def id(self):
+        return self._id
+    
+    @property
+    def action(self):
+        return self._action
+        
+    @property
+    def target(self):
+        return self._target
+
+    @property
+    def context(self):
+        return self._context
 
 
 class cckkViewer(cckkRectangle):
@@ -210,6 +242,8 @@ class cckkViewer(cckkRectangle):
         self._mer_rect = cckkRectangle()  # Minimum enclosing rectangle of the images
         self._images = {} # Dictionary of cckkImage objects that are viewed through the viewer. The object keys are the object id().
         self._layers = [] # Stack of cckkLayer objects representing image layers in the viewer. First layer in the list is at the *top*.
+        self._actions = [] # Stack of cckkAction objects representing actions carried out in the viewer
+
         self.add_images(images)
 
         if horiz is not None or vert is not None:
@@ -218,6 +252,16 @@ class cckkViewer(cckkRectangle):
     @property
     def background(self):
         return [self._fill] * (self.xcols * self.yrows)
+
+    def _add_action(self, action: str, target: str = None, context = None):
+        self._actions.append(cckkAction(action:=action, target=target, context=context))
+
+    @property
+    def lastAction(self):
+        if len(self._actions) > 0:
+            return self._actions[-1].id
+        else:
+            return 0
 
     def add_images(self, images=[]):
         """Add images to the viewer
@@ -306,7 +350,7 @@ class cckkViewer(cckkRectangle):
         """View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat"""
         return self.view().pixels
 
-    def moveTo(self, xpos, ypos, keep=False):
+    def moveTo(self, xpos, ypos=None, keep=False):
         """Move the viewer to the specified position
 
         Args:
@@ -317,6 +361,11 @@ class cckkViewer(cckkRectangle):
         Returns:
         View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
         """
+        self._add_action(action="MoveViewer", target="self", context={ "before": (self.xpos, self.ypos) })
+
+        if isinstance(xpos, tuple) and len(xpos) == 2:
+            xpos, ypos = xpos
+
         self.xpos = xpos
         self.ypos = ypos
 
@@ -325,7 +374,7 @@ class cckkViewer(cckkRectangle):
 
         return self.view()
 
-    def move(self, dx, dy, keep=False):
+    def move(self, dx, dy=None, keep=False):
         """Move the viewer
 
         Args:
@@ -336,6 +385,11 @@ class cckkViewer(cckkRectangle):
         Returns:
         View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
         """
+        self._add_action( action="MoveViewer", target="self", context={"before": (self.xpos, self.ypos)})
+
+        if isinstance(dx, tuple) and len(dx) == 2:
+            dx, dy = dx
+
         self.xpos = self.xpos + dx
         self.ypos = self.ypos + dy
 
@@ -396,7 +450,7 @@ class cckkViewer(cckkRectangle):
                 if img is not None:
                     img_list.append(img)
         return img_list
-    
+
     def _find_below(self, name):
         name_list = []
         found = False
@@ -419,16 +473,20 @@ class cckkViewer(cckkRectangle):
         if layer is not None:
             layer.show()
         return self
-               
-    def moveTo_img(self, name, xpos, ypos, keep=False):
+
+    def moveTo_img(self, name, xpos, ypos=None, keep=False):
         idx = self._find_image_id(name)
         if idx >= 0:
+            self._add_action(action="MoveImage", target=name
+                             ,context={ "before": (self._images[idx].xpos, self._images[idx].ypos) })
             self._images[idx].moveTo(xpos, ypos, self._mer_rect if keep else None)
         return self
 
-    def move_img(self, name, dx, dy, keep=False):
+    def move_img(self, name, dx, dy=None, keep=False):
         idx = self._find_image_id(name)
         if idx >= 0:
+            self._add_action(action="MoveImage", target=name
+                             ,context={ "before": (self._images[idx].xpos, self._images[idx].ypos) })
             self._images[idx].move(dx, dy, self._mer_rect if keep else None)
         return self
 
@@ -539,6 +597,20 @@ class cckkViewer(cckkRectangle):
 
         return found
 
+    def undo(self):
+        action = self._actions.pop() 
+
+        match action.action:
+            case "MoveViewer":
+                self.moveTo(action.context["before"])
+            case "MoveImage":
+                self.moveTo_img(name=action.target, xpos=action.context["before"], ypos=None)
+            case _:
+                # Unknown action
+                pass
+
+        return self
+
     def exportAsString(self, colour_dict=None):
         """Export the viewer's current view as a string representation
 
@@ -612,12 +684,13 @@ class cckkImage(cckkRectangle):
         else:
             return "?"  # Unknown colour
 
-    def __init__(self, imgA=None, imgAA=None, imgStr=None, imgFile=None, img_cols=8, name=""):
+    def __init__(self, imgA=None, imgAA=None, imgStr=None, imgFile=None, img_cols=8, pos=None, name=""):
         """Contructs a cckkImage object
 
         Args:
         imgA: One-dimensional array of image pixels. Each pixel is a list containing [R, G, B] (red, green, blue). Each R-G-B element must be an integer between 0 and 255.
         img_cols: Number of columns in the image
+        pos: Tuple containing the position of the image (x,y)
 
         Returns:
         cckkImage object
@@ -638,6 +711,9 @@ class cckkImage(cckkRectangle):
             self.createFromString(imgStr, None)
         elif imgFile is not None:
             self.createFromImageFile(imgFile)
+
+        if pos is not None and len(pos) == 2:
+            x, y = pos
 
     def createFromArray(self, imgA, img_cols=8):
         self._imgAA = [imgA[i: i + img_cols]
@@ -845,35 +921,46 @@ class cckkImage(cckkRectangle):
         sub_img.ypos = sub_rect.ypos
         return sub_img
 
-    def moveTo(self, xpos, ypos, keep_rect=None):
+    def moveTo(self, xpos, ypos = None, keep_rect=None):
         """Move the image to the specified position
 
         Args:
-        xpos: New x-position
+        xpos: New x-position. if a tuple with the format (x,y), use this as the position
         ypos: New y-position
         keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
 
         Returns:
         cckkImage object
         """
-        self.xpos = xpos
-        self.ypos = ypos
+        if isinstance(xpos, tuple) and len(xpos) == 2:
+            xpos, ypos = xpos
+
+        if xpos is not None:
+            self.xpos = xpos
+        if ypos is not None:
+            self.ypos = ypos
+
         self.keep_within(keep_rect)
         return self
 
-    def move(self, dx, dy, keep_rect=None):
+    def move(self, dx, dy=None, keep_rect=None):
         """Move the image (relative to the viewer)
 
         Args:
-        dx: Change in x-position
+        dx: Change in x-position. if a tuple with the format (ddx,dy), use this as the position delta
         dy: Change in y-position
         keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
 
         Returns:
         cckkImage object
         """
-        self.xpos += dx
-        self.ypos += dy
+        if isinstance(dx, tuple) and len(dx) == 2:
+            dx, dy = dx
+
+        if dx is not None:
+            self.xpos += dx
+        if dy is not None:
+            self.ypos += dy
         self.keep_within(keep_rect)
         return self
 

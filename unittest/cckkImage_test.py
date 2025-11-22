@@ -46,6 +46,26 @@ class test_cckkImage(unittest.TestCase):
         self.assertEqual(img.xpos, 0)
         self.assertEqual(img.ypos, 0)
 
+    def test_cckkImage_move(self):
+        img = cckkImage()
+        img.moveTo(3,5)
+        self.assertEqual(img.xpos, 3)
+        self.assertEqual(img.ypos, 5)
+
+        pos = (4,6)
+        img.moveTo(pos)
+        self.assertEqual(img.xpos, pos[0])
+        self.assertEqual(img.ypos, pos[1])
+
+        img.move(3,5)
+        self.assertEqual(img.xpos, 7)
+        self.assertEqual(img.ypos, 11)
+
+        dxdy = (-3,-2)
+        img.move(dxdy)
+        self.assertEqual(img.xpos, 4)
+        self.assertEqual(img.ypos, 9)
+
     def test_cckkImage_pixels(self):
         img_str = "rg.\n.cy\nxw."
         img = cckkImage(imgStr=img_str)

@@ -1,8 +1,38 @@
 import unittest
-from cckk import cckkImage, cckkViewer
+from cckk import cckkImage, cckkViewer, cckkAction
 
 
 class test_cckkViewer(unittest.TestCase):
+
+    def test_cckkAction_id(self):
+        a1 = cckkAction("one")
+        a2 = cckkAction("two", "target2")
+        a3 = cckkAction("three", context=(2,3))
+        self.assertEqual(a1.id, 1)
+        self.assertEqual(a2.id, 2)
+        self.assertEqual(a3.id, 3)
+        self.assertEqual(a2.target, "target2")
+        self.assertEqual(a3.context, (2,3))
+
+    def test_cckkViewer_lastAction(self):
+        start_id = cckkAction._nextID - 1
+        img = cckkImage(imgStr="rgb\ncym\nxw", name = "image")
+        viewer = cckkViewer(images=[img])
+        viewer.move(1,2)
+        self.assertEqual(viewer.lastAction, 1+start_id)
+        viewer.moveTo_img("image", 3, 4)
+        viewer.move_img("image", 5, 6)
+        self.assertEqual(viewer.lastAction, 3+start_id)
+
+    def test_cckkViewer_undo(self):
+        img = cckkImage(imgStr="rgb\ncym\nxw", name = "image")
+        viewer = cckkViewer(images=[img])
+        viewer.move(1,2)
+        self.assertEqual(viewer.pos, (1,2))
+        viewer.move(3,4)
+        self.assertEqual(viewer.pos, (4,6))
+        viewer.undo()
+        self.assertEqual(viewer.pos, (1,2))
 
     def test_cckkViewer_properties(self):
         viewer0 = cckkViewer()
