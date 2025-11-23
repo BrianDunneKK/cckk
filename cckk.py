@@ -2,6 +2,7 @@
 # = Add ActionID to undo()
 # - Add move_if() ... if not overlap
 # - Replace _find_image_id() with _find_image()
+# - Move keep into cckkCondition for move_ing(), etc
 
 import copy
 import time
@@ -217,8 +218,8 @@ class cckkCondition:
         self._only_if_overlap = only_if_overlap
 
     @property
-    def only_if_overlap(self):
-        return self._only_if_overlap
+    def unless_overlap(self):
+        return self._unless_overlap
 
     @property
     def only_if_overlap(self):
@@ -498,12 +499,18 @@ class cckkViewer(cckkRectangle):
             self._images[idx].moveTo(xpos, ypos, self._mer_rect if keep else None)
         return self
 
-    def move_img(self, name, dx, dy=None, keep=False):
+    def move_img(self, name: str, dx: int | tuple[int, int], dy: int = None, keep: bool = False, condition: cckkCondition = None):
         idx = self._find_image_id(name)
         if idx >= 0:
             self._add_action(action="MoveImage", target=name
                              ,context={ "before": (self._images[idx].xpos, self._images[idx].ypos) })
             self._images[idx].move(dx, dy, self._mer_rect if keep else None)
+
+            if condition is not None:
+                if condition.unless_overlap is not None and len(condition.unless_overlap) > 0:
+                    if self.overlap_multi("green", ["blue"]) is not None:
+                        self.undo()
+
         return self
 
     def align_image(self, name, horiz="C", vert="C"):

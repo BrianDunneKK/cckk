@@ -1,5 +1,5 @@
 import unittest
-from cckk import cckkImage, cckkViewer, cckkAction
+from cckk import cckkImage, cckkViewer, cckkAction, cckkCondition
 
 
 class test_cckkViewer(unittest.TestCase):
@@ -143,8 +143,22 @@ rgbcymxw"""
         self.assertEqual(viewer.overlap_with("turquoise"), "violet")
         self.assertEqual(viewer.overlap_with("violet"), None)
 
+    def test_cckkViewer_move_condition(self):
+        img_green = cckkImage(imgA = [(0,255,0)], name="green", pos = (0,6))
+        img_blue = cckkImage(imgA = [(0,0,255)]*4, name="blue", pos=(0,5))
+        viewer = cckkViewer(images=[img_green,img_blue])
+        self.assertEqual(img_green.pos, (0,6))
 
+        cond = cckkCondition(unless_overlap=["blue"])
+        viewer.move_img("green", 0, -1, condition=cond)
+        self.assertEqual(img_green.pos, (0,6))
+
+        viewer.move_img("green", 0, -1)
+        self.assertEqual(img_green.pos, (0,5))
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
