@@ -1,5 +1,5 @@
 import unittest
-from cckk import cckkImage, cckkViewer, cckkAction, cckkCondition
+from cckk import cckkImage, cckkViewer, cckkAction, cckkCondition, cckkColourDict
 
 
 class test_cckkViewer(unittest.TestCase):
@@ -61,7 +61,7 @@ rgbcymxw"""
     def test_cckkViewer_view(self):
         img_str = "rgb\ncym\nxw."
         img = cckkImage(imgStr=img_str)
-        violet = cckkImage.def_colour_dict["v"]
+        violet = cckkColourDict.def_colour_dict["v"]
         viewer = cckkViewer(images=[img], xcols=4, yrows=4, fill=violet)  # Violet background ("v")
         img_view = viewer.view()
         view_str = "vvvv\nrgbv\ncymv\nxwvv"
@@ -155,6 +155,17 @@ rgbcymxw"""
 
         viewer.move_img("green", 0, -1)
         self.assertEqual(img_green.pos, (0,5))
+
+        cond2 = cckkCondition(only_if_overlap=["blue"])
+        viewer.moveTo_img("green", 0, 5)
+        self.assertEqual(img_green.pos, (0,5))
+        viewer.move_img("green", 3, 0, condition=cond2)
+        self.assertEqual(img_green.pos, (3,5))
+
+        viewer.move_img("green", 1, 0, condition=cond2)
+        self.assertEqual(img_green.pos, (3,5))
+        viewer.move_img("green", -1, 0, condition=cond2)
+        self.assertEqual(img_green.pos, (2,5))
 
 
 if __name__ == "__main__":

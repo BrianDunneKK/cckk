@@ -1,8 +1,7 @@
 ### To Do
-# = Add ActionID to undo()
-# - Add move_if() ... if not overlap
 # - Replace _find_image_id() with _find_image()
-# - Move keep into cckkCondition for move_ing(), etc
+# - Move keep into cckkCondition for move_ing(), etc ... implement keep_within and rotate_within
+# - Add cckkCondition to cckkViewer.move() and .moveTo()
 
 import copy
 import time
@@ -34,7 +33,7 @@ class cckkRectangle:
         return self
 
     @property
-    def xcols(self):
+    def xcols(self) -> int:
         """No. of columns in the rectangle"""
         return self._xcols
 
@@ -43,7 +42,7 @@ class cckkRectangle:
         self._xcols = value
 
     @property
-    def yrows(self):
+    def yrows(self) -> int:
         """No. of rows in the rectangle"""
         return self._yrows
 
@@ -52,7 +51,7 @@ class cckkRectangle:
         self._yrows = value
 
     @property
-    def xpos(self):
+    def xpos(self) -> int:
         return self._xpos
 
     @xpos.setter
@@ -60,7 +59,7 @@ class cckkRectangle:
         self._xpos = value
 
     @property
-    def ypos(self):
+    def ypos(self) -> int:
         return self._ypos
 
     @ypos.setter
@@ -68,7 +67,7 @@ class cckkRectangle:
         self._ypos = value
 
     @property
-    def pos(self):
+    def pos(self) -> tuple[int,int]:
         return (self.xpos, self.ypos)
 
     @pos.setter
@@ -83,7 +82,7 @@ class cckkRectangle:
 
         return self.xpos == other.xpos and self.ypos == other.ypos and self.xcols == other.xcols and self.yrows == other.yrows
 
-    def keep_within(self, outer_rect=None):
+    def keep_within(self, outer_rect=None) -> "cckkRectangle":
         """Adjust the rectangle position to keep it fully within another rectangle.
         Test bottom-right first so that top-left correction is not overridden
 
@@ -105,7 +104,7 @@ class cckkRectangle:
 
         return self
 
-    def str(self):
+    def str(self) -> str:
         return (
             "cckkRectangle: "
             + str(self.xcols)
@@ -118,7 +117,7 @@ class cckkRectangle:
             + ")\n"
         )
 
-    def overlap(self, other_rect):
+    def overlap(self, other_rect) -> "cckkRectangle":
         """Calculate the intersection of this rectangle with another rectangle
 
         Args:
@@ -144,7 +143,7 @@ class cckkRectangle:
         else:
             return None
 
-    def calculate_mer(rectangles=[]):
+    def calculate_mer(rectangles=[]) -> "cckkRectangle":
         """Calculate the minimum enclosing rectangle of a list of rectangles"""
         mer = cckkRectangle()
         if len(rectangles) > 0:
@@ -168,18 +167,18 @@ class cckkLayer:
         self.visible = visible
     
     @property
-    def id(self):
+    def id(self) -> int:
         return self._img_id
     
     @property
-    def name(self):
+    def name(self) -> str:
         return self._img_name
         
-    def show(self):
+    def show(self) -> "cckkLayer":
         self.visible = True
         return self
         
-    def hide(self):
+    def hide(self) -> "cckkLayer":
         self.visible = False
         return self
 
@@ -187,7 +186,7 @@ class cckkAction:
     _nextID = 1
 
     # Class representation of a viewer action
-    def __init__(self, action: str, target: str = None, context = None):
+    def __init__(self, action: str, target: str = None, context: dict = None):
         self._id = cckkAction._nextID
         self._action = action
         self._target = target
@@ -195,35 +194,51 @@ class cckkAction:
         cckkAction._nextID += 1
     
     @property
-    def id(self):
+    def id(self) -> int:
         return self._id
     
     @property
-    def action(self):
+    def action(self) -> str:
         return self._action
         
     @property
-    def target(self):
+    def target(self) -> str:
         return self._target
 
     @property
-    def context(self):
+    def context(self) -> dict:
         return self._context
 
 
 class cckkCondition:
     # Class representation of condition impacting an action
-    def __init__(self, unless_overlap: list[str] = None, only_if_overlap: list[str] = None):
+    def __init__(
+        self,
+        unless_overlap: list[str] = None,
+        only_if_overlap: list[str] = None,
+        keep_within: cckkRectangle = None,
+        rotate_within: cckkRectangle = None,
+    ):
         self._unless_overlap = unless_overlap
         self._only_if_overlap = only_if_overlap
+        self._keep_within = keep_within
+        self._rotate_within = rotate_within
 
     @property
-    def unless_overlap(self):
+    def unless_overlap(self) -> list[str]:
         return self._unless_overlap
 
     @property
-    def only_if_overlap(self):
+    def only_if_overlap(self) -> list[str]:
         return self._only_if_overlap
+
+    @property
+    def keep_within(self) -> cckkRectangle:
+        return self._keep_within
+
+    @property
+    def rotate_within(self) -> cckkRectangle:
+        return self._rotate_within
 
 
 class cckkViewer(cckkRectangle):
@@ -505,10 +520,14 @@ class cckkViewer(cckkRectangle):
             self._add_action(action="MoveImage", target=name
                              ,context={ "before": (self._images[idx].xpos, self._images[idx].ypos) })
             self._images[idx].move(dx, dy, self._mer_rect if keep else None)
-
+ 
             if condition is not None:
                 if condition.unless_overlap is not None and len(condition.unless_overlap) > 0:
                     if self.overlap_multi("green", ["blue"]) is not None:
+                        self.undo()
+
+                if condition.only_if_overlap is not None and len(condition.only_if_overlap) > 0:
+                    if self.overlap_multi("green", ["blue"]) is None:
                         self.undo()
 
         return self
@@ -558,13 +577,12 @@ class cckkViewer(cckkRectangle):
         else:
             return 0
 
-    def overlap_string(self, img1_name, img2_name, colour_dict=None):
+    def overlap_string(self, img1_name, img2_name):
         """Get a string representation of the overlapping area between two images in the viewer
 
         Args:
         img1_name: Name of the first image
         img2_name: Name of the second image
-        colour_dict: Dictionary mapping pixel colours to characters.
 
         Returns:
         String representation of the overlapping area
@@ -572,7 +590,7 @@ class cckkViewer(cckkRectangle):
         idx1 = self._find_image_id(img1_name)
         idx2 = self._find_image_id(img2_name)
         if idx1 >= 0 and idx2 >= 0:
-            return self._images[idx1].overlap_string(self._images[idx2], colour_dict)
+            return self._images[idx1].overlap_string(self._images[idx2])
         else:
             return ""
 
@@ -634,17 +652,14 @@ class cckkViewer(cckkRectangle):
 
         return self
 
-    def exportAsString(self, colour_dict=None):
+    def exportAsString(self):
         """Export the viewer's current view as a string representation
-
-        Args:
-        colour_dict: Dictionary mapping pixel colours to characters.
 
         Returns:
         String representation of the viewer's current view
         """
         view = self.view()
-        return view.exportAsString(colour_dict)
+        return view.exportAsString()
 
     def str(self):
         as_str = "cckkViewer:\n"
@@ -654,13 +669,7 @@ class cckkViewer(cckkRectangle):
         as_str += "  Images: " + str(len(self._images)) + "\n"
         return as_str
 
-
-class cckkImage(cckkRectangle):
-    # Class representation of an image
-    # The base class cckkRectangle is used to represent the image size and position.
-    ##############################################################################################
-
-    """Class representation of an image"""
+class cckkColourDict:
     def_colour_dict = {
         ".": None,  # Transparent
         "x": (0, 0, 0),  # Black
@@ -687,33 +696,76 @@ class cckkImage(cckkRectangle):
         "v": (128, 0, 255),  # Violet
     }
 
-    reverse_colour_dict = {v: k for k, v in def_colour_dict.items()}
+    def __init__(
+        self,
+        colour_dict: dict[str, tuple[int, int, int]] = None,
+        update_dict: dict[str, tuple[int, int, int]] = None,
+    ):
+        self._colour_dict = (colour_dict if colour_dict is not None else cckkColourDict.def_colour_dict.copy())
+        if update_dict is not None:
+            self._colour_dict.update(update_dict)
 
-    def rgbAsString(pixel, colour_dict=None):
+        self._reverse_colour_dict = {v: k for k, v in self._colour_dict.items()}
+
+    @property
+    def dict(self) -> dict[str, tuple[int, int, int]]:
+        return self._colour_dict
+
+    @property
+    def reverse_dict(self) -> dict:
+        return self._reverse_colour_dict
+
+    def get(self, colour_string: str) -> tuple:
+        """Convert a string to its pixel (RGB) equivalent
+
+        Args:
+        colour_string Pixel value as a character
+
+        Returns:
+        Pixel value as a list containing [R, G, B] (red, green, blue)
+        """
+        return self.dict.get(colour_string, None)
+
+    def getRGB(self, pixel: tuple[int, int, int]) -> str:
         """Convert a pixel to its string equivalent
 
         Args:
         pixel: Pixel value as a list containing [R, G, B] (red, green, blue)
-        colour_dict: Dictionary mapping pixel colours to characters. If None, uses the default colour dictionary.
 
         Returns:
         Pixel value as a character
         """
-        if colour_dict is None:
-            colour_dict = cckkImage.reverse_colour_dict
+        return self.reverse_dict.get(pixel, "?")
 
-        if pixel in colour_dict:
-            return colour_dict[pixel]
-        else:
-            return "?"  # Unknown colour
 
-    def __init__(self, imgA=None, imgAA=None, imgStr=None, imgFile=None, img_cols=8, pos=None, name=""):
+class cckkImage(cckkRectangle):
+    # Class representation of an image
+    # The base class cckkRectangle is used to represent the image size and position.
+    ##############################################################################################
+
+    """Class representation of an image"""
+    def __init__(
+        self,
+        imgA: list[tuple[int, int, int]] = None,
+        imgAA: list[list[tuple[int, int, int]]] = None,
+        imgStr: str = None,
+        imgFile: str = None,
+        img_cols: int = 8,
+        pos: tuple[int, int] = None,
+        name: str = "",
+        colour_dict: cckkColourDict = None,
+    ):
         """Contructs a cckkImage object
 
         Args:
         imgA: One-dimensional array of image pixels. Each pixel is a list containing [R, G, B] (red, green, blue). Each R-G-B element must be an integer between 0 and 255.
+        imgAA: Two-dimensional array of image pixels
+        imgStr: Image as a string, mapped using the colour dictionary
+        imgFile: Filename containing the image
         img_cols: Number of columns in the image
         pos: Tuple containing the position of the image (x,y)
+        name: Name of the image
+        colour_dict: Dictionary to map the image to/from strings
 
         Returns:
         cckkImage object
@@ -723,7 +775,8 @@ class cckkImage(cckkRectangle):
         """
         super().__init__()  # Initialize cckkRectangle base class
         self._imgAA = None  # Two-dimensional array of image pixels
-        self._name = name  # Name of the image
+        self._name = name   # Name of the image
+        self._colour_dict = colour_dict  # Colour dictionary
 
         if imgA is not None:
             self.createFromArray(imgA, img_cols)
@@ -731,12 +784,19 @@ class cckkImage(cckkRectangle):
             self._imgAA = imgAA
             self.update_size()
         elif imgStr is not None:
-            self.createFromString(imgStr, None)
+            self.createFromString(imgStr)
         elif imgFile is not None:
             self.createFromImageFile(imgFile)
 
         if pos is not None and len(pos) == 2:
             self.pos = pos
+
+    @property
+    def colour_dict(self):
+        if self._colour_dict is None:
+            self._colour_dict = cckkColourDict()
+
+        return self._colour_dict
 
     def createFromArray(self, imgA, img_cols=8):
         self._imgAA = [imgA[i: i + img_cols]
@@ -744,10 +804,7 @@ class cckkImage(cckkRectangle):
         self.update_size()
         return self
 
-    def createFromString(self, imgStr, colour_dict=None):
-        if colour_dict is None:
-            colour_dict = cckkImage.def_colour_dict
-
+    def createFromString(self, imgStr):
         self._imgAA = []
         img_lines = imgStr.splitlines()
 
@@ -760,8 +817,8 @@ class cckkImage(cckkRectangle):
         for img_line in img_lines:
             line_pixels = []
             for ch in img_line.strip():
-                if ch in colour_dict:
-                    line_pixels.append(colour_dict[ch])
+                if ch in self.colour_dict.dict:
+                    line_pixels.append(self.colour_dict.get(ch))
                 else:
                     raise Exception(
                         "Invalid colour character '" + ch + "' in image string"
@@ -818,7 +875,7 @@ class cckkImage(cckkRectangle):
         self.update_size()
         return self
 
-    def exportAsString(self, colour_dict=None):
+    def exportAsString(self):
         """Export the image as a string representation
 
         Args:
@@ -827,13 +884,10 @@ class cckkImage(cckkRectangle):
         Returns:
         String representation of the image
         """
-        if colour_dict is None:
-            colour_dict = cckkImage.reverse_colour_dict
-
         img_str = ""
         for row in self._imgAA:
             for pixel in row:
-                img_str += cckkImage.rgbAsString(pixel)
+                img_str += self.colour_dict.getRGB(pixel)
             img_str += "\n"
         return img_str.strip()
 
@@ -864,7 +918,7 @@ class cckkImage(cckkRectangle):
     @property
     def name(self):
         return self._name
-    
+
     @property
     def image(self):
         """Copy of the full image"""
@@ -916,7 +970,7 @@ class cckkImage(cckkRectangle):
         Returns:
         Pixel value as a character
         """
-        return cckkImage.rgbAsString(self.getPixel(x, y), colour_dict)
+        return self.colour_dict.getRGB(self.getPixel(x, y))
 
     def getSubImage(self, sub_rect):
         """Get a sub-image from the image
@@ -1078,12 +1132,11 @@ class cckkImage(cckkRectangle):
                             pixel_count += 1
         return pixel_count
 
-    def overlap_string(self, other_img, colour_dict=None):
+    def overlap_string(self, other_img):
         """Get a string representation of the overlapping area with another image
 
         Args:
         other_img: cckkImage object representing the other image
-        colour_dict: Dictionary mapping pixel colours to characters. If None, uses the default colour dictionary.
 
         Returns:
         String representation of the overlapping area
@@ -1092,7 +1145,7 @@ class cckkImage(cckkRectangle):
         if img is None:
             return ""
         else:
-            return img.exportAsString(colour_dict)
+            return img.exportAsString()
 
     def overlap_multi(self, other_imgs):
         """Calculate the intersection of this image with a stack of other images
@@ -1138,7 +1191,7 @@ class cckkImage(cckkRectangle):
 
                     if not overlap_found:
                         row_pixels.append(None)
-                        
+
                 inter_imgAA.append(row_pixels)
 
             inter_img = cckkImage(imgAA=inter_imgAA)
