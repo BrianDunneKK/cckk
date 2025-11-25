@@ -525,7 +525,7 @@ class cckkViewer(cckkRectangle):
                         self.undo()
 
                 if condition.only_if_overlap is not None and len(condition.only_if_overlap) > 0:
-                    if self.overlap_multi(name, condition.unless_overlap) is None:
+                    if self.overlap_multi(name, condition.only_if_overlap) is None:
                         self.undo()
 
         return self
