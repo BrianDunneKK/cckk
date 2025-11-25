@@ -1,5 +1,4 @@
 ### To Do
-# - Replace _find_image_id() with _find_image()
 # - Move keep into cckkCondition for move_ing(), etc ... implement keep_within and rotate_within
 # - Add cckkCondition to cckkViewer.move() and .moveTo()
 
@@ -326,14 +325,11 @@ class cckkViewer(cckkRectangle):
         Raises:
         Exception: If no images in viewer or invalid image index specified
         """
-        img_id = self._find_image_id(img_name)
-        if img_id < 0:
-            img_id = 0
+        img = self.find_image(img_name, 0)
 
-        if len(self._images) == 0 or img_id < 0 or img_id >= len(self._images):
-            raise Exception("No images in viewer or invalid image index specified")
-
-        img = self._images[img_id]
+        if img is None:
+            # raise Exception("No images in viewer or invalid image index specified")
+            return self
 
         if horiz.upper() == "L":
             self.xpos = img.xpos
@@ -444,41 +440,43 @@ class cckkViewer(cckkRectangle):
                 return layer
         return None
 
-    def _find_image_id(self, name):
+    def _find_image_id(self, name: str, id_if_not_found: int = -1) -> str:
         """Find an image in the viewer by name
 
         Args:
         name: Name of the image to find
+        id_if_not_found: ID to return if name is not found
 
         Returns:
         ID of the image in the viewer's image list, or -1 if not found
         """
         layer = self._find_layer(name)
         if layer is None:
-            return -1
+            return id_if_not_found
         else:
             return layer.id
 
-    def _find_image(self, name):
+    def find_image(self, name: str, id_if_not_found: int = -1) -> "cckkImage":
         """Find an image in the viewer by name
 
         Args:
         name: Name of the image to find
+        id_if_not_found: ID of the image to return if name is not found
 
         Returns:
         cckkImage object in the viewer's image list, or None if not found
         """
-        idx = self._find_image_id(name)
+        idx = self._find_image_id(name, id_if_not_found)
         if idx >= 0:
             return self._images[idx]
         else:
             return None
 
-    def _find_images(self, name_list):
+    def find_images(self, name_list):
         img_list = []
         if name_list is not None:
             for name in name_list:         
-                img = self._find_image(name)
+                img = self.find_image(name)
                 if img is not None:
                     img_list.append(img)
         return img_list
@@ -507,20 +505,20 @@ class cckkViewer(cckkRectangle):
         return self
 
     def moveTo_img(self, name, xpos, ypos=None, keep=False):
-        idx = self._find_image_id(name)
-        if idx >= 0:
+        img = self.find_image(name)
+        if img is not None:
             self._add_action(action="MoveImage", target=name
-                             ,context={ "before": (self._images[idx].xpos, self._images[idx].ypos) })
-            self._images[idx].moveTo(xpos, ypos, self._mer_rect if keep else None)
+                             ,context={ "before": (img.xpos, img.ypos) })
+            img.moveTo(xpos, ypos, self._mer_rect if keep else None)
         return self
 
     def move_img(self, name: str, dx: int | tuple[int, int], dy: int = None, keep: bool = False, condition: cckkCondition = None):
-        idx = self._find_image_id(name)
-        if idx >= 0:
+        img = self.find_image(name)
+        if img is not None:
             self._add_action(action="MoveImage", target=name
-                             ,context={ "before": (self._images[idx].xpos, self._images[idx].ypos) })
-            self._images[idx].move(dx, dy, self._mer_rect if keep else None)
- 
+                             ,context={ "before": (img.xpos, img.ypos) })
+            img.move(dx, dy, self._mer_rect if keep else None)
+
             if condition is not None:
                 if condition.unless_overlap is not None and len(condition.unless_overlap) > 0:
                     if self.overlap_multi("green", ["blue"]) is not None:
@@ -533,9 +531,9 @@ class cckkViewer(cckkRectangle):
         return self
 
     def align_image(self, name, horiz="C", vert="C"):
-        idx = self._find_image_id(name)
-        if idx >= 0:
-            self._images[idx].align(self, horiz, vert)
+        img = self.find_image(name)
+        if img is not None:
+            img.align(self, horiz, vert)
         return self
 
     def align_images(self, horiz="C", vert="C"):
@@ -553,10 +551,10 @@ class cckkViewer(cckkRectangle):
         Returns:
         cckkImage object representing the overlapping image, or None if there is no overlap. Pixels are taken from the first image.
         """
-        idx1 = self._find_image_id(img1_name)
-        idx2 = self._find_image_id(img2_name)
-        if idx1 >= 0 and idx2 >= 0:
-            return self._images[idx1].overlap(self._images[idx2])
+        img1 = self.find_image(img1_name)
+        img2 = self.find_image(img2_name)
+        if img1 is not None and img2 is not None:
+            return img1.overlap(img2)
         else:
             return None
 
@@ -570,10 +568,10 @@ class cckkViewer(cckkRectangle):
         Returns:
         Number of pixels that overlap between the two images
         """
-        idx1 = self._find_image_id(img1_name)
-        idx2 = self._find_image_id(img2_name)
-        if idx1 >= 0 and idx2 >= 0:
-            return self._images[idx1].overlap_count(self._images[idx2])
+        img1 = self.find_image(img1_name)
+        img2 = self.find_image(img2_name)
+        if img1 is not None and img2 is not None:
+            return img1.overlap_count(img2)
         else:
             return 0
 
@@ -587,10 +585,10 @@ class cckkViewer(cckkRectangle):
         Returns:
         String representation of the overlapping area
         """
-        idx1 = self._find_image_id(img1_name)
-        idx2 = self._find_image_id(img2_name)
-        if idx1 >= 0 and idx2 >= 0:
-            return self._images[idx1].overlap_string(self._images[idx2])
+        img1 = self.find_image(img1_name)
+        img2 = self.find_image(img2_name)
+        if img1 is not None and img2 is not None:
+            return img1.overlap_string(img2)
         else:
             return ""
 
@@ -604,13 +602,13 @@ class cckkViewer(cckkRectangle):
         Returns:
         cckkImage object representing the intersection image, or None if there is no intersection
         """
-        img = self._find_image(name)
+        img = self.find_image(name)
         if img is None:
             return None
 
         if other_names is None:
             other_names = self._find_below(name)
-        other_imgs = self._find_images(other_names)
+        other_imgs = self.find_images(other_names)
         return img.overlap_multi(other_imgs)
 
     def overlap_with(self, name, other_names = None):
@@ -623,13 +621,13 @@ class cckkViewer(cckkRectangle):
         Returns:
         Name of the first image in a stack of other images that intersects
         """
-        img = self._find_image(name)
+        img = self.find_image(name)
         if img is None:
             return None
 
         if other_names is None:
             other_names = self._find_below(name)
-        other_imgs = self._find_images(other_names)
+        other_imgs = self.find_images(other_names)
 
         found = None
         for i, other_img in enumerate(other_imgs):
