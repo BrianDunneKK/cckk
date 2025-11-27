@@ -521,11 +521,11 @@ class cckkViewer(cckkRectangle):
 
             if condition is not None:
                 if condition.unless_overlap is not None and len(condition.unless_overlap) > 0:
-                    if self.overlap_multi(name, condition.unless_overlap) is not None:
+                    if self.overlap_multi_count(name, condition.unless_overlap) > 0:
                         self.undo()
 
                 if condition.only_if_overlap is not None and len(condition.only_if_overlap) > 0:
-                    if self.overlap_multi(name, condition.only_if_overlap) is None:
+                    if self.overlap_multi_count(name, condition.only_if_overlap) == 0:
                         self.undo()
 
         return self
@@ -610,6 +610,25 @@ class cckkViewer(cckkRectangle):
             other_names = self._find_below(name)
         other_imgs = self.find_images(other_names)
         return img.overlap_multi(other_imgs)
+
+    def overlap_multi_count(self, name, other_names = None):
+        """Count the number of pixels that overlap with a stack of other images, ignoring transparent pixels
+
+        Args:
+        name: Name of a cckkImage object name
+        other_names: Stack (list) of cckkImage object name
+
+        Returns:
+        Number of pixels in this image that overlap with any pixel in the other images
+        """
+        img = self.find_image(name)
+        if img is None:
+            return None
+
+        if other_names is None:
+            other_names = self._find_below(name)
+        other_imgs = self.find_images(other_names)
+        return img.overlap_multi_count(other_imgs)
 
     def overlap_with(self, name, other_names = None):
         """For an image, find the name of the first image in a stack of other images that intersects
@@ -1199,6 +1218,48 @@ class cckkImage(cckkRectangle):
         else:
             return None
 
+    def overlap_multi_count(self, other_imgs):
+        """Count the number of pixels that overlap with a stack of other images, ignoring transparent pixels
+
+        Args:
+        other_imgs: Stack (list) of cckkImage objects
+
+        Returns:
+        Number of pixels in this image that overlap with any pixel in the other images
+        """
+        pixel_count = 0
+        other_mer = cckkRectangle.calculate_mer(other_imgs)
+        overlap_rect = super().overlap(other_mer)
+        if overlap_rect is not None:
+            inter_imgAA = []
+            for yrow in reversed(range(overlap_rect.yrows)):
+                for xcol in range(overlap_rect.xcols):
+                    overlap_found = False
+                    for other_img in other_imgs:
+                        x_self = overlap_rect.xpos + xcol - self.xpos
+                        y_self = overlap_rect.ypos + yrow - self.ypos
+                        x_other = overlap_rect.xpos + xcol - other_img.xpos
+                        y_other = overlap_rect.ypos + yrow - other_img.ypos
+                        if (
+                            0 <= x_self < self.xcols
+                            and 0 <= y_self < self.yrows
+                            and 0 <= x_other < other_img.xcols
+                            and 0 <= y_other < other_img.yrows
+                            and not overlap_found
+                        ):
+                            pixel_self = self.getPixel(x_self, y_self)
+                            pixel_other = other_img.getPixel(x_other, y_other)
+
+                            if pixel_self is not None and pixel_other is not None:
+                                overlap_found = True
+                        else:
+                            pass # Multiple images so some may have no overlap
+
+                    if overlap_found:
+                        pixel_count += 1
+
+        return pixel_count
+
     def str(self):
         as_str = "cckkImage:\n"
         as_str = "  Name: \"" + self.name + "\"\n"
@@ -1337,12 +1398,72 @@ class cckkSenseHat:
         return return_events
 
 
+class cckkEvent:
+    """Class for SenseHat joystick emulator event"""
+    def __init__(self, timestamp, direction, action):
+        """Contructs a cckkEvent object
+
+        Args:
+            timestamp (float): Event timestamp
+            direction (str): Joystick direction
+            action (str): Joystick action
+        """
+        self.timestamp = timestamp
+        self.direction = direction
+        self.action = action
+
+class cckkEventFactory:
+    """Class for SenseHat joystick emulator"""
+    def createInputEvent(timestamp=None, direction="up", action="pressed"):
+        """Create a SenseHat emulator InputEvent event
+
+        Returns:
+            dict: Event dictionary
+        """
+        # direction - The direction the joystick was moved, as a string ("up", "down", "left", "right", "middle")
+        # action - The action that occurred, as a string ("pressed", "released", "held")
+        _timestamp = timestamp if timestamp is not None else time.time()
+        return cckkEvent(timestamp= _timestamp, direction=direction, action=action)
+
+    test_events = []
+    def addTestEvent(timestamp=None, direction="up", action="pressed"):
+        cckkEventFactory.test_events.append(
+            cckkEvent(timestamp=timestamp, direction=direction, action=action)
+        )
+
+    event_idx = 0
+
+    def get_events(self, loop: bool = False):
+        if loop and cckkEventFactory.event_idx == len(cckkEventFactory.test_events) and len(cckkEventFactory.test_events) > 0:
+            cckkEventFactory.event_idx = 0
+        if cckkEventFactory.event_idx < len(cckkEventFactory.test_events):
+            event = cckkEventFactory.test_events[cckkEventFactory.event_idx]
+            cckkEventFactory.event_idx += 1
+            return [event]
+        else:
+            return []
+
 class cckkSenseHatEmu:
     """Class for SenseHat emulator"""
 
     def __init__(self):
         """Contructs a cckkSenseHatEmu object"""
-        self._x = None
+        self._pixels = None
+        self.stick = cckkEventFactory()
+
+    def clear(self):
+        self._pixels = [(0, 0, 0)] * 64
+
+    def set_pixels(self, pixel_list):
+        self._pixels = pixel_list
+        img_str = ""
+        _colour_dict = cckkColourDict(update_dict={ " ": (0,0,0) })
+        for i in range(8):
+            for j in range(8):
+                pixel = self._pixels[i * 8 + j]
+                img_str += _colour_dict.getRGB(pixel)
+            img_str += "\n"
+        print(img_str+"\n")
 
     def get_humidity(self):
         return 50.0
@@ -1355,17 +1476,6 @@ class cckkSenseHatEmu:
 
     def get_orientation(self):
         return {"pitch": 0, "roll": 0, "yaw": 0}
-
-    def createInputEvent(self, timestamp=None, direction="up", action="pressed"):
-        """Create a SenseHat emulator InputEvent event
-
-        Returns:
-            dict: Event dictionary
-        """
-        # direction - The direction the joystick was moved, as a string ("up", "down", "left", "right", "middle")
-        # action - The action that occurred, as a string ("pressed", "released", "held")
-        _timestamp = timestamp if timestamp is not None else time.time()
-        return {"timestamp ": _timestamp, "direction": direction, "action": action}
 
 
 if __name__ == '__main__':

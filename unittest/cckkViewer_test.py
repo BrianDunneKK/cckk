@@ -128,6 +128,23 @@ rgbcymxw"""
         img_v = viewer.overlap_multi("violet")
         self.assertEqual(img_v, None)
 
+    def test_cckkViewer_overlap_multi_count(self):
+        img1_str = "..\nrr"
+        img2_str = "b.\nb."
+        imgv_str = "v"
+        img1 = cckkImage(imgStr=img1_str, name="one")
+        img2 = cckkImage(imgStr=img2_str, name = "two")
+        imgv = cckkImage(imgStr=imgv_str, name = "violet", pos=(1,1))
+        viewer = cckkViewer(images=[imgv, img1, img2], xcols=2, yrows=2)
+
+        self.assertEqual(viewer.overlap_count("violet", "one"), 0)
+        self.assertEqual(viewer.overlap_count("violet", "two"), 0)
+        self.assertEqual(viewer.overlap_multi_count("violet", ["one"]), 0)
+        self.assertEqual(viewer.overlap_multi_count("violet", ["one", "two"]), 0)
+
+        imgv.moveTo(0,0)
+        self.assertEqual(viewer.overlap_multi_count("violet", ["one", "two"]), 1)
+
     def test_cckkViewer_overlap_with(self):
         img1_str = "rgb\nc..\nxw."
         imgt_str = "tt\ntt\ntt"
