@@ -1,6 +1,7 @@
 ### To Do
 # - Move keep into cckkCondition for move_ing(), etc ... implement keep_within and rotate_within
 # - Add cckkCondition to cckkViewer.move() and .moveTo()
+# - Add method to display a message on the grid
 
 import copy
 import time
@@ -80,6 +81,39 @@ class cckkRectangle:
             return NotImplemented
 
         return self.xpos == other.xpos and self.ypos == other.ypos and self.xcols == other.xcols and self.yrows == other.yrows
+
+    def align(self, align_rect: "cckkRectangle", horiz: str = "C", vert: str = "C", keep_rect: "cckkRectangle" = None):
+        """Align the rectangle relative to another rectangle
+        
+        Args:
+        align_rect: cckkRectangle object representing the rectangle to align to
+        horiz: Rectangle horizontal alignment relative to selected rectangle.  Contains "L", "C" or "R" (left, centre, right)
+        vert: Rectangle vertical alignment relative to selected rectangle. Contains "T", "C" or "B" (top, centre, bottom)
+        keep_rect: cckkRectangle object representing the rectangle to keep this rectangle within
+
+        Returns:
+        cckkRectangle object
+        """
+        if horiz.upper() == "L":
+            self.xpos = align_rect.xpos
+        elif horiz.upper() == "R":
+            self.xpos = align_rect.xpos + align_rect.xcols - self.xcols
+        elif horiz.upper() == "C":
+            self.xpos = align_rect.xpos + \
+                int((align_rect.xcols - self.xcols) / 2)
+
+        if vert.upper() == "T":
+            self.ypos = align_rect.ypos
+        elif vert.upper() == "B":
+            self.ypos = align_rect.ypos + align_rect.yrows - self.yrows
+        elif vert.upper() == "C":
+            self.ypos = align_rect.ypos + \
+                int((align_rect.yrows - self.yrows) / 2)
+
+        if keep_rect is not None:
+            self.keep_within(keep_rect)
+
+        return self
 
     def keep_within(self, outer_rect=None) -> "cckkRectangle":
         """Adjust the rectangle position to keep it fully within another rectangle.
@@ -312,12 +346,13 @@ class cckkViewer(cckkRectangle):
         self._mer_rect = cckkRectangle.calculate_mer(self._images.values())
         return self
 
-    def align(self, img_name="", horiz="C", vert="C"):
+    def align_to_img(self, img_name: str = "", horiz: str = "C", vert: str = "C", keep_img_name: str = None):
         """Align the viewer relative to an image
         Args:
-        img_idx: Index of the image in the viewer's image list to align the viewer to. Default: 0 (top image)
+        img_name: Name of the image in the viewer's image list to align the viewer to. Default: 0 (top image)
         horiz: Viewer horizontal alignment relative to selected image.  Contains "L", "C" or "R" (left, centre, right)
         vert: Viewer vertical alignment relative to selected image. Contains "T", "C" or "B" (top, centre, bottom)
+        keep_img_name: Name of the image representing the rectangle to keep the viewer within
 
         Returns:
         cckkViewer object
@@ -325,25 +360,9 @@ class cckkViewer(cckkRectangle):
         Raises:
         Exception: If no images in viewer or invalid image index specified
         """
-        img = self.find_image(img_name, 0)
-
-        if img is None:
-            # raise Exception("No images in viewer or invalid image index specified")
-            return self
-
-        if horiz.upper() == "L":
-            self.xpos = img.xpos
-        elif horiz.upper() == "R":
-            self.xpos = img.xpos + img.xcols - self.xcols
-        else:
-            self.xpos = img.xpos + int((img.xcols - self.xcols) / 2)
-
-        if vert.upper() == "T":
-            self.ypos = img.ypos
-        elif vert.upper() == "B":
-            self.ypos = img.ypos + img.yrows - self.yrows
-        else:
-            self.ypos = img.ypos + int((img.yrows - self.yrows) / 2)
+        self.align(
+            self.find_image(img_name, 0), horiz, vert, self.find_image(keep_img_name)
+        )
 
         return self
 
@@ -907,25 +926,6 @@ class cckkImage(cckkRectangle):
                 img_str += self.colour_dict.getRGB(pixel)
             img_str += "\n"
         return img_str.strip()
-
-    def align(self, viewer_rect, horiz="C", vert="C"):
-        if horiz.upper() == "L":
-            self.xpos = viewer_rect.xpos
-        elif horiz.upper() == "R":
-            self.xpos = viewer_rect.xpos + viewer_rect.xcols - self.xcols
-        elif horiz.upper() == "C":
-            self.xpos = viewer_rect.xpos + \
-                int((viewer_rect.xcols - self.xcols) / 2)
-
-        if vert.upper() == "T":
-            self.ypos = viewer_rect.ypos
-        elif vert.upper() == "B":
-            self.ypos = viewer_rect.ypos + viewer_rect.yrows - self.yrows
-        elif vert.upper() == "C":
-            self.ypos = viewer_rect.ypos + \
-                int((viewer_rect.yrows - self.yrows) / 2)
-
-        return self
 
     def update_size(self):
         """Update the image size"""

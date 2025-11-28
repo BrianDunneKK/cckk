@@ -191,6 +191,25 @@ rgbcymxw"""
         pos = viewer.find_image("red").pos
         self.assertEqual(pos, (3,3))
 
+        img_b = cckkImage(imgStr="b", name="blue")
+        img_large = cckkImage(imgA=[(22,33,44)] * 400, name="large", img_cols=20)
+        viewer2 = cckkViewer(images=[img_large,img_b], xcols=8, yrows=8)
+        img_b.pos = (10,10)
+        viewer2.align(img_b, "C", "C", img_large)
+        self.assertEqual(viewer2.pos, (7,7))
+
+        img_b.pos = (3,3)
+        viewer2.align(img_b, "C", "C", img_large)
+        self.assertEqual(viewer2.pos, (0,0))
+
+        img_b.pos = (17,18)
+        viewer2.align(img_b, "C", "C", img_large)
+        self.assertEqual(viewer2.pos, (12,12))
+
+        img_b.pos = (3,18)
+        viewer2.align(img_b, "C", "C", img_large)
+        self.assertEqual(viewer2.pos, (0,12))
+
 
 if __name__ == "__main__":
     unittest.main()
