@@ -1371,6 +1371,44 @@ class cckkSenseHat(cckkViewer):
                 if event["simple"] == simple_event:
                     event_received = True
 
+class cckkSenseHatGame(cckkSenseHat):
+    """Class wrapper for SenseHat class for games"""
+
+    def __init__(self, images=[]):
+        """Contructs a cckkSenseHatGame object"""
+        super().__init__(images=images)
+        self._in_progress = False
+        self._score = 0
+        self._start_time = None
+        self._game_time = None
+
+    def start_game(self):
+        """Start the game"""
+        self._in_progress = True
+        self._score = 0
+        self._start_time = time.time()
+
+    def end_game(self):
+        """End the game"""
+        self._in_progress = False
+        self._game_time = time.time() - self._start_time
+
+    @property
+    def game_in_progress(self):
+        """Check if the game is in progress"""
+        return self._in_progress
+    
+    @property
+    def game_score(self):
+        """Get the current score"""
+        return self._score
+
+    @property
+    def game_time(self):
+        """Get the total game time"""
+        return self._game_time
+
+
 class cckkEvent:
     """Class for SenseHat joystick emulator event"""
     def __init__(self, timestamp, direction, action):
