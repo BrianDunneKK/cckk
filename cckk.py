@@ -1,4 +1,6 @@
 ### To Do
+# - Move _add_action() to cckkRectangle
+# - Make SenserHat a superclass of cckkViewer
 # - Move keep into cckkCondition for move_ing(), etc ... implement keep_within and rotate_within
 # - Add cckkCondition to cckkViewer.move() and .moveTo()
 # - Add method to display a message on the grid
@@ -11,7 +13,7 @@ class cckkRectangle:
     def __init__(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0):
         """Contructs a cckkRectangle object.
 
-        Args:
+        Args:# - Make Senset
         xcols: Number of columns in the rectangle
         yrows: Number of rows in the rectangle
         xpos: X-position of the rectangle
@@ -81,6 +83,49 @@ class cckkRectangle:
             return NotImplemented
 
         return self.xpos == other.xpos and self.ypos == other.ypos and self.xcols == other.xcols and self.yrows == other.yrows
+
+    def moveTo(self, xpos, ypos = None, keep_rect=None):
+        """Move the image to the specified position
+
+        Args:
+        xpos: New x-position. if a tuple with the format (x,y), use this as the position
+        ypos: New y-position
+        keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
+
+        Returns:
+        cckkImage object
+        """
+        if isinstance(xpos, tuple) and len(xpos) == 2:
+            xpos, ypos = xpos
+
+        if xpos is not None:
+            self.xpos = xpos
+        if ypos is not None:
+            self.ypos = ypos
+
+        self.keep_within(keep_rect)
+        return self
+
+    def move(self, dx, dy=None, keep_rect=None):
+        """Move the image (relative to the viewer)
+
+        Args:
+        dx: Change in x-position. if a tuple with the format (ddx,dy), use this as the position delta
+        dy: Change in y-position
+        keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
+
+        Returns:
+        cckkImage object
+        """
+        if isinstance(dx, tuple) and len(dx) == 2:
+            dx, dy = dx
+
+        if dx is not None:
+            self.xpos += dx
+        if dy is not None:
+            self.ypos += dy
+        self.keep_within(keep_rect)
+        return self
 
     def align(self, align_rect: "cckkRectangle", horiz: str = "C", vert: str = "C", keep_rect: "cckkRectangle" = None):
         """Align the rectangle relative to another rectangle
@@ -405,21 +450,10 @@ class cckkViewer(cckkRectangle):
         ypos: New y-position
         keep: If True, keeps the cammera over the MER of the images
 
-        Returns:
-        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+        Returns: self
         """
         self._add_action(action="MoveViewer", target="self", context={ "before": (self.xpos, self.ypos) })
-
-        if isinstance(xpos, tuple) and len(xpos) == 2:
-            xpos, ypos = xpos
-
-        self.xpos = xpos
-        self.ypos = ypos
-
-        if keep:
-            self.keep_within(self._mer_rect)
-
-        return self.view()
+        return super().moveTo(xpos, ypos, self._mer_rect if keep else None)
 
     def move(self, dx, dy=None, keep=False):
         """Move the viewer
@@ -429,21 +463,11 @@ class cckkViewer(cckkRectangle):
         dy: Change in y-position
         keep: If True, keeps the cammera over the MER of the images
 
-        Returns:
-        View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat
+        Returns: self
         """
         self._add_action( action="MoveViewer", target="self", context={"before": (self.xpos, self.ypos)})
+        super().move(dx, dy, self._mer_rect if keep else None)
 
-        if isinstance(dx, tuple) and len(dx) == 2:
-            dx, dy = dx
-
-        self.xpos = self.xpos + dx
-        self.ypos = self.ypos + dy
-
-        if keep:
-            self.keep_within(self._mer_rect)
-
-        return self.view()
 
     def _find_layer(self, name):
         """Find a image layer in the viewer by name
@@ -1014,49 +1038,6 @@ class cckkImage(cckkRectangle):
         sub_img.xpos = sub_rect.xpos
         sub_img.ypos = sub_rect.ypos
         return sub_img
-
-    def moveTo(self, xpos, ypos = None, keep_rect=None):
-        """Move the image to the specified position
-
-        Args:
-        xpos: New x-position. if a tuple with the format (x,y), use this as the position
-        ypos: New y-position
-        keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
-
-        Returns:
-        cckkImage object
-        """
-        if isinstance(xpos, tuple) and len(xpos) == 2:
-            xpos, ypos = xpos
-
-        if xpos is not None:
-            self.xpos = xpos
-        if ypos is not None:
-            self.ypos = ypos
-
-        self.keep_within(keep_rect)
-        return self
-
-    def move(self, dx, dy=None, keep_rect=None):
-        """Move the image (relative to the viewer)
-
-        Args:
-        dx: Change in x-position. if a tuple with the format (ddx,dy), use this as the position delta
-        dy: Change in y-position
-        keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
-
-        Returns:
-        cckkImage object
-        """
-        if isinstance(dx, tuple) and len(dx) == 2:
-            dx, dy = dx
-
-        if dx is not None:
-            self.xpos += dx
-        if dy is not None:
-            self.ypos += dy
-        self.keep_within(keep_rect)
-        return self
 
     def roll(self, dx, dy):
         result = []
