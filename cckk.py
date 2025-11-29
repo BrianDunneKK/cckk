@@ -428,9 +428,9 @@ class cckkViewer(cckkRectangle):
                             and yrow_img >= 0
                             and yrow_img < img.yrows
                         ):
-                            img_pixel = img.getPixel(xcol_img, yrow_img)
+                            img_pixel = img.get_pixel(xcol_img, yrow_img)
                             if img_pixel is not None:
-                                view_img.setPixel(xcol, yrow, pixel=img_pixel)
+                                view_img.set_pixel(xcol, yrow, pixel=img_pixel)
         return view_img
 
     @property
@@ -1007,7 +1007,7 @@ class cckkImage(cckkRectangle):
         Returns:
         Pixel value as a character
         """
-        return self.colour_dict.get_rgb(self.getPixel(x, y))
+        return self.colour_dict.get_rgb(self.get_pixel(x, y))
 
     def get_sub_image(self, sub_rect):
         """Get a sub-image from the image
@@ -1025,7 +1025,7 @@ class cckkImage(cckkRectangle):
                 x_img = sub_rect.xpos + xcol - self.xpos
                 y_img = sub_rect.ypos + yrow - self.ypos
                 if 0 <= x_img < self.xcols and 0 <= y_img < self.yrows:
-                    row_pixels.append(self.getPixel(x_img, y_img))
+                    row_pixels.append(self.get_pixel(x_img, y_img))
                 else:
                     # Transparent pixel if out of bounds
                     row_pixels.append(None)
@@ -1073,12 +1073,12 @@ class cckkImage(cckkRectangle):
                         and 0 <= x_other < other_img.xcols
                         and 0 <= y_other < other_img.yrows
                     ):
-                        pixel_self = self.getPixel(x_self, y_self)
+                        pixel_self = self.get_pixel(x_self, y_self)
                         if top_only:
                             # Take the pixel from this image
                             row_pixels.append(pixel_self)
                         else:
-                            pixel_other = other_img.getPixel(x_other, y_other)
+                            pixel_other = other_img.get_pixel(x_other, y_other)
                             if pixel_self is not None:
                                 # Take the pixel from this image
                                 row_pixels.append(pixel_self)
@@ -1120,8 +1120,8 @@ class cckkImage(cckkRectangle):
                         and 0 <= x_other < other_img.xcols
                         and 0 <= y_other < other_img.yrows
                     ):
-                        pixel_self = self.getPixel(x_self, y_self)
-                        pixel_other = other_img.getPixel(x_other, y_other)
+                        pixel_self = self.get_pixel(x_self, y_self)
+                        pixel_other = other_img.get_pixel(x_other, y_other)
                         if pixel_self is not None and pixel_other is not None:
                             pixel_count += 1
         return pixel_count
@@ -1170,8 +1170,8 @@ class cckkImage(cckkRectangle):
                             and 0 <= y_other < other_img.yrows
                             and not overlap_found
                         ):
-                            pixel_self = self.getPixel(x_self, y_self)
-                            pixel_other = other_img.getPixel(x_other, y_other)
+                            pixel_self = self.get_pixel(x_self, y_self)
+                            pixel_other = other_img.get_pixel(x_other, y_other)
                             if pixel_self is not None:
                                 # Take the pixel from this image
                                 row_pixels.append(pixel_self)
@@ -1224,8 +1224,8 @@ class cckkImage(cckkRectangle):
                             and 0 <= y_other < other_img.yrows
                             and not overlap_found
                         ):
-                            pixel_self = self.getPixel(x_self, y_self)
-                            pixel_other = other_img.getPixel(x_other, y_other)
+                            pixel_self = self.get_pixel(x_self, y_self)
+                            pixel_other = other_img.get_pixel(x_other, y_other)
 
                             if pixel_self is not None and pixel_other is not None:
                                 overlap_found = True

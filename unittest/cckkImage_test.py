@@ -70,9 +70,9 @@ class test_cckkImage(unittest.TestCase):
         img = cckkImage()
         img.create_from_pixel(4, 3)
         self.assertEqual(img.export_as_string(), "....\n....\n....")
-        img.setPixel(0, 0, pixel=(255, 0, 0))
-        img.setPixel(1, 0, pixel=(0, 255, 0))
-        img.setPixel(2, 1, pixel=(0, 0, 255))
+        img.set_pixel(0, 0, pixel=(255, 0, 0))
+        img.set_pixel(1, 0, pixel=(0, 255, 0))
+        img.set_pixel(2, 1, pixel=(0, 0, 255))
         self.assertEqual(img.export_as_string(), "....\n..b.\nrg..")
 
     def test_cckkImage_get_rect(self):
