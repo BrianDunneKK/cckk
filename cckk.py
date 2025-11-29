@@ -1294,7 +1294,10 @@ class cckkSenseHat(cckkViewer):
         self.clear_pixels()
         self._sense.set_pixels(self.pixels)
 
-    def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=4):
+    def show_message(self, text_string:str, scroll_speed:float=0.1, text_colour:list=[255, 255, 255], back_colour:list=[0, 0, 0]):
+        self._sense.show_message(text_string, scroll_speed=scroll_speed, text_colour=text_colour, back_colour=back_colour)
+
+    def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=5):
         events = self._sense.stick.get_events()
         return_events = []
         simple_events = {
@@ -1305,10 +1308,10 @@ class cckkSenseHat(cckkViewer):
             "middle": "M"
         }
         dxdy_map = {
-            "R": (1, 0),
-            "L": (-1, 0),
-            "U": (0, 1),
-            "D": (0, -1)
+            "R": (-1, 0),
+            "L": (1, 0),
+            "U": (0, -1),
+            "D": (0, 1)
         }
 
         if inc_joystick:
@@ -1437,6 +1440,9 @@ class cckkSenseHatEmu:
 
     def get_orientation(self):
         return {"pitch": 0, "roll": 0, "yaw": 0}
+
+    def show_message(self, text_string:str, scroll_speed:float=0.1, text_colour:list=[255, 255, 255], back_colour:list=[0, 0, 0]):
+        print(text_string)
 
 
 if __name__ == '__main__':
