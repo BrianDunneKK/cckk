@@ -1,6 +1,4 @@
 ### To Do
-# - Move _add_action() to cckkRectangle
-# - Make SenserHat a superclass of cckkViewer
 # - Move keep into cckkCondition for move_ing(), etc ... implement keep_within and rotate_within
 # - Add cckkCondition to cckkViewer.move() and .moveTo()
 # - Add method to display a message on the grid
@@ -1252,11 +1250,12 @@ class cckkImage(cckkRectangle):
         return as_str
 
 
-class cckkSenseHat:
+class cckkSenseHat(cckkViewer):
     """Class wrapper for SenseHat class"""
 
-    def __init__(self):
+    def __init__(self, images=[]):
         """Contructs a cckkSenseHat object"""
+        super().__init__(xcols=8, yrows=8, xpos=0, ypos=0, fill=(0, 0, 0), images=images, horiz=None, vert=None)
         self._sense = None
 
     @property
@@ -1286,33 +1285,14 @@ class cckkSenseHat:
 
         self._sense = sense_hat
 
-    def setViewer(self, viewer):
-        """Set the SenseHat LED matrix from a cckkViewer object
-
-        Args:
-            viewer (cckkViewer): cckkViewer object
-        Raises:
-            Exception: Invalid cckkViewer object provided
-        """
-        if not isinstance(viewer, cckkViewer):
-            raise Exception("A cckkViewer object must be provided")
-
-        self._viewer = viewer
-        self.updateViewer()
-
-    def updateViewer(self):
-        """Update the SenseHat LED matrix from a cckkViewer object"""
+    def clear_pixels(self):
+        """Clear the SenseHat LED matrix"""
         self._sense.clear()
-        self._sense.set_pixels(self._viewer.pixels)
 
-    @property
-    def viewer(self):
-        """cckkViewer object associated with the SenseHat"""
-        return self._viewer
-
-    @viewer.setter
-    def viewer(self, viewer):
-        self.setViewer(viewer)
+    def update_pixels(self):
+        """Update the SenseHat LED matrix from a cckkViewer object"""
+        self.clear_pixels()
+        self._sense.set_pixels(self.pixels)
 
     def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=4):
         events = self._sense.stick.get_events()
