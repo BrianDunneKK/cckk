@@ -1,12 +1,14 @@
 ### To Do
-# - Move keep into cckkCondition for move_ing(), etc ... implement keep_within and rotate_within
+# - Move keep into cckkCondition for move_ing(), etc ... implement keep_within
 # - Add cckkCondition to cckkViewer.move() and .move_to()
 
 import copy
 import time
 
 class cckkRectangle:
-    def __init__(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0):
+    _next_ID = 1
+
+    def __init__(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0, name: str = None):
         """Contructs a cckkRectangle object.
 
         Args:# - Make Senset
@@ -14,6 +16,7 @@ class cckkRectangle:
         yrows: Number of rows in the rectangle
         xpos: X-position of the rectangle
         ypos: Y-position of the rectangle
+        name: Name of the image
 
         Returns:
         cckkRectangle  object
@@ -21,6 +24,10 @@ class cckkRectangle:
         Raises:
         Exception: Never
         """
+        self._id = cckkRectangle._next_ID
+        cckkRectangle._next_ID += 1
+        self._name = name if name is not None else f"{self._id:>04}"
+        self._assoc = {} # Dictionary of associated objects, such as the images linked to a viewer
         self.set(xcols, yrows, xpos, ypos)
 
     def set(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0) -> "cckkRectangle":
@@ -73,6 +80,14 @@ class cckkRectangle:
         self.xpos = value[0]
         self.ypos = value[1]
 
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    @property
+    def id(self) -> int:
+        return self._id
+
     def __eq__(self, other : object):
         if not isinstance(other, cckkRectangle):
             # Don't attempt to compare against unrelated types
@@ -80,6 +95,37 @@ class cckkRectangle:
 
         return self.xpos == other.xpos and self.ypos == other.ypos and self.xcols == other.xcols and self.yrows == other.yrows
 
+    def _add_assoc(self, assoc: "cckkRectangle") -> "cckkRectangle":  
+        """Add an associated object to the rectangle
+
+        Args:
+        assoc: Object to associate with the rectangle
+
+        Returns:
+        cckkRectangle object
+        """
+        self._assoc[assoc.id] = assoc
+        return self 
+
+    def _get_assoc(self, assoc_id: int) -> "cckkRectangle":
+        """Get an associated object
+
+        Args:
+        assoc_id: ID of the associated object to get
+
+        Returns:
+        Associated object, or None if not found
+        """
+        if assoc_id in self._assoc:
+            return self._assoc[assoc_id]
+        else:
+            return None
+        
+    @property
+    def assoc_values(self) -> ["cckkRectangle"]:
+        """Get the list of associated objects"""
+        return self._assoc.values()
+    
     def move_to(self, xpos, ypos = None, keep_rect=None):
         """Move the image to the specified position
 
@@ -257,19 +303,19 @@ class cckkLayer:
         return self
 
 class cckkAction:
-    _nextID = 1
+    _next_action_ID = 1
 
     # Class representation of a viewer action
     def __init__(self, action: str, target: str = None, context: dict = None):
-        self._id = cckkAction._nextID
+        self._action_id = cckkAction._next_action_ID
         self._action = action
         self._target = target
         self._context = context
-        cckkAction._nextID += 1
+        cckkAction._next_action_ID += 1
     
     @property
     def id(self) -> int:
-        return self._id
+        return self._action_id
     
     @property
     def action(self) -> str:
@@ -290,13 +336,11 @@ class cckkCondition:
         self,
         unless_overlap: list[str] = None,
         only_if_overlap: list[str] = None,
-        keep_within: cckkRectangle = None,
-        rotate_within: cckkRectangle = None,
+        keep_within: cckkRectangle = None
     ):
         self._unless_overlap = unless_overlap
         self._only_if_overlap = only_if_overlap
         self._keep_within = keep_within
-        self._rotate_within = rotate_within
 
     @property
     def unless_overlap(self) -> list[str]:
@@ -310,10 +354,6 @@ class cckkCondition:
     def keep_within(self) -> cckkRectangle:
         return self._keep_within
 
-    @property
-    def rotate_within(self) -> cckkRectangle:
-        return self._rotate_within
-
 
 class cckkViewer(cckkRectangle):
     # Class representation of a viewer of images for display on a SenseHat
@@ -324,7 +364,7 @@ class cckkViewer(cckkRectangle):
 
     """Class representation of a viewer of images for display on a SenseHat"""
 
-    def __init__(self, xcols=8, yrows=8, xpos=0, ypos=0, fill=(0, 0, 0), images=[], horiz=None, vert=None):
+    def __init__(self, xcols=8, yrows=8, xpos=0, ypos=0, fill=(0, 0, 0), images=[], horiz=None, vert=None, name: str = None):
         """Contructs a cckkViewer object.
         The viewer represents the view area through which an image is seen. This view can be displayed on a SenseHat LED matrix.
 
@@ -335,6 +375,7 @@ class cckkViewer(cckkRectangle):
         ypos: Y-position of the viewer
         fill: Fill colour if the image does not fill the viewer
         images: List of cckkImage objects that are viewed through the viewer, First image in the list is at the *back*.
+        name: Name of the viewer
 
         Returns:
         cckkViewer object
@@ -342,11 +383,10 @@ class cckkViewer(cckkRectangle):
         Raises:
         Exception: Never
         """
-        super().__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos)  # Initialize cckkRectangle base class
+        super().__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos, name=name)  # Initialize cckkRectangle base class
 
         self._fill = fill  # Fill colour if the image does not fill the viewer
         self._mer_rect = cckkRectangle()  # Minimum enclosing rectangle of the images
-        self._images = {} # Dictionary of cckkImage objects that are viewed through the viewer. The object keys are the object id().
         self._layers = [] # Stack of cckkLayer objects representing image layers in the viewer. First layer in the list is at the *top*.
         self._actions = [] # Stack of cckkAction objects representing actions carried out in the viewer
 
@@ -381,10 +421,9 @@ class cckkViewer(cckkRectangle):
         for img in reversed(images):
             if not isinstance(img, cckkImage):
                 raise Exception("Invalid image specified")
-            _id = id(img)
-            self._images[_id] = img
-            self._layers.insert(0, cckkLayer(img_id=_id, img_name=img.name, visible=True)) # Add new layers at the front
-        self._mer_rect = cckkRectangle.calculate_mer(self._images.values())
+            self._add_assoc(img)
+            self._layers.insert(0, cckkLayer(img_id=img.id, img_name=img.name, visible=True)) # Add new layers at the front
+        self._mer_rect = cckkRectangle.calculate_mer(self.assoc_values)
         return self
 
     def align_to_img(self, img_name: str = "", horiz: str = "C", vert: str = "C", keep_img_name: str = None):
@@ -417,7 +456,7 @@ class cckkViewer(cckkRectangle):
 
         for layer in reversed(self._layers): # Start with the bottom layer and paint each one on top
             if layer.visible:
-                img = self._images[layer.id]
+                img = self._get_assoc(layer.id)
                 for yrow in range(self.yrows):
                     for xcol in range(self.xcols):
                         xcol_img = self.xpos + xcol - img.xpos
@@ -507,7 +546,8 @@ class cckkViewer(cckkRectangle):
         """
         idx = self._find_image_id(name, id_if_not_found)
         if idx >= 0:
-            return self._images[idx]
+            return self._get_assoc(idx)
+            #return self._images[idx]
         else:
             return None
 
@@ -576,7 +616,7 @@ class cckkViewer(cckkRectangle):
         return self
 
     def align_images(self, horiz="C", vert="C"):
-        for img in self._images:
+        for img in self.assoc_values:
             img.align(self, horiz, vert)
         return self
 
@@ -722,7 +762,7 @@ class cckkViewer(cckkRectangle):
         as_str += "  " + super().str() + "\n"
         as_str += "  Fill: " + str(self._fill) + "\n"
         as_str += "  MER: " + self._mer_rect.str() + "\n"
-        as_str += "  Images: " + str(len(self._images)) + "\n"
+        as_str += "  Images: " + str(len(self.assoc_values)) + "\n"
         return as_str
 
 class cckkColourDict:
@@ -808,7 +848,7 @@ class cckkImage(cckkRectangle):
         imgFile: str = None,
         img_cols: int = 8,
         pos: tuple[int, int] = None,
-        name: str = "",
+        name: str = None,
         colour_dict: cckkColourDict = None,
     ):
         """Contructs a cckkImage object
@@ -829,9 +869,8 @@ class cckkImage(cckkRectangle):
         Raises:
         Exception: If invalid image specified
         """
-        super().__init__()  # Initialize cckkRectangle base class
+        super().__init__(name=name)  # Initialize cckkRectangle base class
         self._imgAA = None  # Two-dimensional array of image pixels
-        self._name = name   # Name of the image
         self._colour_dict = colour_dict  # Colour dictionary
 
         if imgA is not None:
@@ -951,10 +990,6 @@ class cckkImage(cckkRectangle):
         """Update the image size"""
         self.xcols = len(self._imgAA[0])
         self.yrows = len(self._imgAA)
-
-    @property
-    def name(self):
-        return self._name
 
     @property
     def image(self):
@@ -1405,8 +1440,11 @@ class cckkSenseHatGame(cckkSenseHat):
 
     @property
     def game_time(self):
-        """Get the total game time"""
-        return self._game_time
+        """Get the current or total game time"""
+        if self.game_in_progress:
+            return time.time() - self._start_time
+        else:
+            return self._game_time
 
 
 class cckkEvent:

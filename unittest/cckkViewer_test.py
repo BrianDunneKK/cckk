@@ -15,7 +15,7 @@ class test_cckkViewer(unittest.TestCase):
         self.assertEqual(a3.context, (2,3))
 
     def test_cckkViewer_lastAction(self):
-        start_id = cckkAction._nextID - 1
+        start_id = cckkAction._next_action_ID - 1
         img = cckkImage(imgStr="rgb\ncym\nxw", name = "image")
         viewer = cckkViewer(images=[img])
         viewer.move(1,2)
