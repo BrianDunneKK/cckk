@@ -10,12 +10,12 @@ class test_cckkSenseHat(unittest.TestCase):
 
         # self.assertRaises(Exception, cckkSenseHat, None)
         with self.assertRaises(Exception) as context:
-            hat.setSenseHat(None)
+            hat._set_sensehat(None)
         self.assertTrue('A SenseHat object must be provided' in str(context.exception))
         
         hat_emu = cckkSenseHatEmu()
         try:
-            hat.setSenseHat(hat_emu)
+            hat._set_sensehat(hat_emu)
         except Exception:
             self.fail("setSenseHat() raised Exception unexpectedly!")
         

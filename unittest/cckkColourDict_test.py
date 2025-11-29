@@ -23,8 +23,8 @@ class test_cckkColourDict(unittest.TestCase):
         self.assertTrue(col_dict.reverse_dict[(0, 255, 0)] == "g")
         self.assertTrue(col_dict.reverse_dict[(0, 0, 255)] == "b")
         self.assertTrue(col_dict.reverse_dict[None] == ".")
-        self.assertEqual(col_dict.getRGB((0, 0, 255)), "b")
-        self.assertEqual(col_dict.getRGB((1, 2, 3)), "?")
+        self.assertEqual(col_dict.get_rgb((0, 0, 255)), "b")
+        self.assertEqual(col_dict.get_rgb((1, 2, 3)), "?")
 
     def test_cckkColourDict_update_dict(self):
         dict2 = {
@@ -35,8 +35,8 @@ class test_cckkColourDict(unittest.TestCase):
         self.assertEqual(col_dict.get("r"), (255, 0, 0))
         self.assertEqual(col_dict.get("g"), (128,128,128))
         self.assertEqual(col_dict.get("*"), (22,33,44))
-        self.assertEqual(col_dict.getRGB((22,33,44)), "*")
-        self.assertEqual(col_dict.getRGB((1, 2, 3)), "?")
+        self.assertEqual(col_dict.get_rgb((22,33,44)), "*")
+        self.assertEqual(col_dict.get_rgb((1, 2, 3)), "?")
 
 
 if __name__ == "__main__":

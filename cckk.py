@@ -1,11 +1,9 @@
 ### To Do
 # - Move keep into cckkCondition for move_ing(), etc ... implement keep_within and rotate_within
-# - Add cckkCondition to cckkViewer.move() and .moveTo()
-# - Add method to display a message on the grid
+# - Add cckkCondition to cckkViewer.move() and .move_to()
 
 import copy
 import time
-
 
 class cckkRectangle:
     def __init__(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0):
@@ -82,7 +80,7 @@ class cckkRectangle:
 
         return self.xpos == other.xpos and self.ypos == other.ypos and self.xcols == other.xcols and self.yrows == other.yrows
 
-    def moveTo(self, xpos, ypos = None, keep_rect=None):
+    def move_to(self, xpos, ypos = None, keep_rect=None):
         """Move the image to the specified position
 
         Args:
@@ -440,7 +438,7 @@ class cckkViewer(cckkRectangle):
         """View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat"""
         return self.view().pixels
 
-    def moveTo(self, xpos, ypos=None, keep=False):
+    def move_to(self, xpos, ypos=None, keep=False):
         """Move the viewer to the specified position
 
         Args:
@@ -451,7 +449,7 @@ class cckkViewer(cckkRectangle):
         Returns: self
         """
         self._add_action(action="MoveViewer", target="self", context={ "before": (self.xpos, self.ypos) })
-        return super().moveTo(xpos, ypos, self._mer_rect if keep else None)
+        return super().move_to(xpos, ypos, self._mer_rect if keep else None)
 
     def move(self, dx, dy=None, keep=False):
         """Move the viewer
@@ -545,12 +543,12 @@ class cckkViewer(cckkRectangle):
             layer.show()
         return self
 
-    def moveTo_img(self, name, xpos, ypos=None, keep=False):
+    def move_to_img(self, name, xpos, ypos=None, keep=False):
         img = self.find_image(name)
         if img is not None:
             self._add_action(action="MoveImage", target=name
                              ,context={ "before": (img.xpos, img.ypos) })
-            img.moveTo(xpos, ypos, self._mer_rect if keep else None)
+            img.move_to(xpos, ypos, self._mer_rect if keep else None)
         return self
 
     def move_img(self, name: str, dx: int | tuple[int, int], dy: int = None, keep: bool = False, condition: cckkCondition = None):
@@ -701,23 +699,23 @@ class cckkViewer(cckkRectangle):
 
         match action.action:
             case "MoveViewer":
-                self.moveTo(action.context["before"])
+                self.move_to(action.context["before"])
             case "MoveImage":
-                self.moveTo_img(name=action.target, xpos=action.context["before"], ypos=None)
+                self.move_to_img(name=action.target, xpos=action.context["before"], ypos=None)
             case _:
                 # Unknown action
                 pass
 
         return self
 
-    def exportAsString(self):
+    def export_as_string(self):
         """Export the viewer's current view as a string representation
 
         Returns:
         String representation of the viewer's current view
         """
         view = self.view()
-        return view.exportAsString()
+        return view.export_as_string()
 
     def str(self):
         as_str = "cckkViewer:\n"
@@ -784,7 +782,7 @@ class cckkColourDict:
         """
         return self.dict.get(colour_string, None)
 
-    def getRGB(self, pixel: tuple[int, int, int]) -> str:
+    def get_rgb(self, pixel: tuple[int, int, int]) -> str:
         """Convert a pixel to its string equivalent
 
         Args:
@@ -837,14 +835,14 @@ class cckkImage(cckkRectangle):
         self._colour_dict = colour_dict  # Colour dictionary
 
         if imgA is not None:
-            self.createFromArray(imgA, img_cols)
+            self.create_from_array(imgA, img_cols)
         elif imgAA is not None:
             self._imgAA = imgAA
             self.update_size()
         elif imgStr is not None:
-            self.createFromString(imgStr)
+            self.create_from_string(imgStr)
         elif imgFile is not None:
-            self.createFromImageFile(imgFile)
+            self.create_from_image_file(imgFile)
 
         if pos is not None and len(pos) == 2:
             self.pos = pos
@@ -856,13 +854,13 @@ class cckkImage(cckkRectangle):
 
         return self._colour_dict
 
-    def createFromArray(self, imgA, img_cols=8):
+    def create_from_array(self, imgA, img_cols=8):
         self._imgAA = [imgA[i: i + img_cols]
                        for i in range(0, len(imgA), img_cols)]
         self.update_size()
         return self
 
-    def createFromString(self, imgStr):
+    def create_from_string(self, imgStr):
         self._imgAA = []
         img_lines = imgStr.splitlines()
 
@@ -886,7 +884,7 @@ class cckkImage(cckkRectangle):
         self.update_size()
         return self
 
-    def createFromImageFile(self, img_filename):
+    def create_from_image_file(self, img_filename):
         """Set the image from an image file
 
         Args:
@@ -915,10 +913,10 @@ class cckkImage(cckkRectangle):
                 imgA[i] = None
             else:
                 imgA[i] = (r, g, b)
-        self.createFromArray(imgA, img_cols)
+        self.create_from_array(imgA, img_cols)
         return self
 
-    def createFromPixel(self, xcols, yrows, pixel=None):
+    def create_from_pixel(self, xcols, yrows, pixel=None):
         """Create an image of the specified size and pixel colour
 
         Args:
@@ -933,7 +931,7 @@ class cckkImage(cckkRectangle):
         self.update_size()
         return self
 
-    def exportAsString(self):
+    def export_as_string(self):
         """Export the image as a string representation
 
         Args:
@@ -945,7 +943,7 @@ class cckkImage(cckkRectangle):
         img_str = ""
         for row in self._imgAA:
             for pixel in row:
-                img_str += self.colour_dict.getRGB(pixel)
+                img_str += self.colour_dict.get_rgb(pixel)
             img_str += "\n"
         return img_str.strip()
 
@@ -972,7 +970,7 @@ class cckkImage(cckkRectangle):
                 imgA.append(pixel)
         return imgA
 
-    def getPixel(self, x, y):
+    def get_pixel(self, x, y):
         """Get the pixel at the specified position
 
         Args:
@@ -984,7 +982,7 @@ class cckkImage(cckkRectangle):
         """
         return self._imgAA[self.yrows-y-1][x]  # Access from bottom-left (0,0)
 
-    def setPixel(self, x, y, pixel=None):
+    def set_pixel(self, x, y, pixel=None):
         """Set the pixel at the specified position
 
         Args:
@@ -998,7 +996,7 @@ class cckkImage(cckkRectangle):
         self._imgAA[self.yrows-y-1][x] = pixel  # Access from bottom-left (0,0)
         return self
 
-    def pixelAsString(self, x, y, colour_dict=None):
+    def pixel_as_string(self, x, y, colour_dict=None):
         """Get the pixel at the specified position as a string character
 
         Args:
@@ -1009,9 +1007,9 @@ class cckkImage(cckkRectangle):
         Returns:
         Pixel value as a character
         """
-        return self.colour_dict.getRGB(self.getPixel(x, y))
+        return self.colour_dict.get_rgb(self.getPixel(x, y))
 
-    def getSubImage(self, sub_rect):
+    def get_sub_image(self, sub_rect):
         """Get a sub-image from the image
 
         Args:
@@ -1141,7 +1139,7 @@ class cckkImage(cckkRectangle):
         if img is None:
             return ""
         else:
-            return img.exportAsString()
+            return img.export_as_string()
 
     def overlap_multi(self, other_imgs):
         """Calculate the intersection of this image with a stack of other images
@@ -1265,10 +1263,10 @@ class cckkSenseHat(cckkViewer):
 
     @sense.setter
     def sense(self, sense_hat):
-        self.setSenseHat(sense_hat)
+        self._set_sensehat(sense_hat)
 
-    def setSenseHat(self, sense_hat):
-        """Associate SenHat object
+    def _set_sensehat(self, sense_hat):
+        """Associate SenseHat object
 
         Args:
             sense_hat (SenseHat): SenseHat object
@@ -1297,7 +1295,7 @@ class cckkSenseHat(cckkViewer):
     def show_message(self, text_string:str, scroll_speed:float=0.1, text_colour:list=[255, 255, 255], back_colour:list=[0, 0, 0]):
         self._sense.show_message(text_string, scroll_speed=scroll_speed, text_colour=text_colour, back_colour=back_colour)
 
-    def getInputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=5):
+    def get_inputs(self, inc_joystick=True, inc_orientation=True, gyro_sensitivity=5):
         events = self._sense.stick.get_events()
         return_events = []
         simple_events = {
@@ -1361,6 +1359,17 @@ class cckkSenseHat(cckkViewer):
 
         return return_events
 
+    def wait_for(self, simple_event:str):
+        """Wait for a specific input event
+
+        Args:
+            simple_event (str): Simple event character to wait for ("R", "L", "U", "D", "M")
+        """
+        event_received = False
+        while not event_received:
+            for event in self.get_inputs():
+                if event["simple"] == simple_event:
+                    event_received = True
 
 class cckkEvent:
     """Class for SenseHat joystick emulator event"""
@@ -1378,7 +1387,7 @@ class cckkEvent:
 
 class cckkEventFactory:
     """Class for SenseHat joystick emulator"""
-    def createInputEvent(timestamp=None, direction="up", action="pressed"):
+    def create_input_event(timestamp=None, direction="up", action="pressed"):
         """Create a SenseHat emulator InputEvent event
 
         Returns:
@@ -1390,7 +1399,7 @@ class cckkEventFactory:
         return cckkEvent(timestamp= _timestamp, direction=direction, action=action)
 
     test_events = []
-    def addTestEvent(timestamp=None, direction="up", action="pressed"):
+    def add_test_event(timestamp=None, direction="up", action="pressed"):
         cckkEventFactory.test_events.append(
             cckkEvent(timestamp=timestamp, direction=direction, action=action)
         )
@@ -1425,7 +1434,7 @@ class cckkSenseHatEmu:
         for i in range(8):
             for j in range(8):
                 pixel = self._pixels[i * 8 + j]
-                img_str += _colour_dict.getRGB(pixel)
+                img_str += _colour_dict.get_rgb(pixel)
             img_str += "\n"
         print(img_str+"\n")
 

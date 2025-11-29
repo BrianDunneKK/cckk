@@ -20,7 +20,7 @@ class test_cckkViewer(unittest.TestCase):
         viewer = cckkViewer(images=[img])
         viewer.move(1,2)
         self.assertEqual(viewer.lastAction, 1+start_id)
-        viewer.moveTo_img("image", 3, 4)
+        viewer.move_to_img("image", 3, 4)
         viewer.move_img("image", 5, 6)
         self.assertEqual(viewer.lastAction, 3+start_id)
 
@@ -65,7 +65,7 @@ rgbcymxw"""
         viewer = cckkViewer(images=[img], xcols=4, yrows=4, fill=violet)  # Violet background ("v")
         img_view = viewer.view()
         view_str = "vvvv\nrgbv\ncymv\nxwvv"
-        self.assertEqual(img_view.exportAsString(), view_str)
+        self.assertEqual(img_view.export_as_string(), view_str)
 
     def test_cckkViewer_layers(self):
         imgr_str = "rrr\nrrr\nrrr"
@@ -77,17 +77,17 @@ rgbcymxw"""
         viewer = cckkViewer(images=[imgb, imgg, imgr], xcols=3, yrows=3)
         img_view = viewer.view()
         view_str = "rgb\nrgb\nrgb"
-        self.assertEqual(img_view.exportAsString(), view_str)
+        self.assertEqual(img_view.export_as_string(), view_str)
         
         viewer.hide_image("green")
         img_view = viewer.view()
         view_str = "rrb\nrrb\nrrb"
-        self.assertEqual(img_view.exportAsString(), view_str)
+        self.assertEqual(img_view.export_as_string(), view_str)
 
         viewer = cckkViewer(images=[imgg, imgr, imgb], xcols=3, yrows=3)
         img_view = viewer.view()
         view_str = "rgg\nrgg\nrgg"
-        self.assertEqual(img_view.exportAsString(), view_str)
+        self.assertEqual(img_view.export_as_string(), view_str)
 
     def test_cckkViewer_pixels(self):
         img_str = "rg.\n.cy\nxw."
@@ -111,19 +111,19 @@ rgbcymxw"""
 
         img_1_tv_str = "rg.\nct.\nxwv"
         img_1tv = viewer.overlap_multi("one", ["turquoise", "violet"])
-        self.assertEqual(img_1tv.exportAsString(), img_1_tv_str)
+        self.assertEqual(img_1tv.export_as_string(), img_1_tv_str)
 
         imgv.move(0,2)
         img_1_tv_str = "rgb\nct.\nxw."
         img_1tv = viewer.overlap_multi("one", ["turquoise", "violet"])
-        self.assertEqual(img_1tv.exportAsString(), img_1_tv_str)
+        self.assertEqual(img_1tv.export_as_string(), img_1_tv_str)
 
         img_1tv = viewer.overlap_multi("one")
-        self.assertEqual(img_1tv.exportAsString(), img_1_tv_str)
+        self.assertEqual(img_1tv.export_as_string(), img_1_tv_str)
 
         img_t_v_str = "tt"
         img_t_v = viewer.overlap_multi("turquoise")
-        self.assertEqual(img_t_v.exportAsString(), img_t_v_str)
+        self.assertEqual(img_t_v.export_as_string(), img_t_v_str)
 
         img_v = viewer.overlap_multi("violet")
         self.assertEqual(img_v, None)
@@ -142,7 +142,7 @@ rgbcymxw"""
         self.assertEqual(viewer.overlap_multi_count("violet", ["one"]), 0)
         self.assertEqual(viewer.overlap_multi_count("violet", ["one", "two"]), 0)
 
-        imgv.moveTo(0,0)
+        imgv.move_to(0,0)
         self.assertEqual(viewer.overlap_multi_count("violet", ["one", "two"]), 1)
 
     def test_cckkViewer_overlap_with(self):
@@ -173,7 +173,7 @@ rgbcymxw"""
         self.assertEqual(img_green.pos, (0,5))
 
         cond2 = cckkCondition(only_if_overlap=["blue"])
-        viewer.moveTo_img("green", 0, 5)
+        viewer.move_to_img("green", 0, 5)
         self.assertEqual(img_green.pos, (0,5))
         viewer.move_img("green", 3, 0, condition=cond2)
         self.assertEqual(img_green.pos, (3,5))
