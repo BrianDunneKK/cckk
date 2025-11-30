@@ -377,17 +377,17 @@ class cckkShape:
             )
         return mer
 
-    def get_by_id(rect_id: int) -> "cckkShape":
+    def get_by_id(id: int) -> "cckkShape":
         """Get a cckkShape object by its ID
 
         Args:
-        rect_id: ID of the rectangle to get
+        id: ID of the rectangle to get
 
         Returns:
         cckkShape object, or None if not found
         """
-        if rect_id in cckkShape._all_by_id:
-            return cckkShape._all_by_id[rect_id]
+        if id is not None and id in cckkShape._all_by_id:
+            return cckkShape._all_by_id[id]
         else:
             return None
 
@@ -400,7 +400,7 @@ class cckkShape:
         Returns:
         cckkShape object, or None if not found
         """
-        if name in cckkShape._all_by_name:
+        if name is not None and name in cckkShape._all_by_name:
             return cckkShape._all_by_name[name]
         else:
             return None
@@ -541,8 +541,9 @@ class cckkViewer(cckkShape):
 
     def align_to_img(self, img_name: str = "", horiz: str = "C", vert: str = "C", keep_img_name: str = None):
         """Align the viewer relative to an image
+
         Args:
-        img_name: Name of the image in the viewer's image list to align the viewer to. Default: 0 (top image)
+        img_name: Name of the image in the viewer's image list to align the viewer to
         horiz: Viewer horizontal alignment relative to selected image.  Contains "L", "C" or "R" (left, centre, right)
         vert: Viewer vertical alignment relative to selected image. Contains "T", "C" or "B" (top, centre, bottom)
         keep_img_name: Name of the image representing the rectangle to keep the viewer within
@@ -554,7 +555,7 @@ class cckkViewer(cckkShape):
         Exception: If no images in viewer or invalid image index specified
         """
         self.align(
-            self.find_image(img_name, 0), horiz, vert, self.find_image(keep_img_name)
+            self.find_image(img_name), horiz, vert, self.find_image(keep_img_name)
         )
 
         return self
