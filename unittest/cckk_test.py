@@ -1,5 +1,5 @@
 import unittest
-from cckk import cckkRectangle, cckkViewer, cckkImage
+from cckk import cckkShape, cckkViewer, cckkImage
 
 class test_cckk(unittest.TestCase):
 

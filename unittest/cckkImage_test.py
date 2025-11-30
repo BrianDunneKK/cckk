@@ -1,5 +1,5 @@
 import unittest
-from cckk import cckkImage, cckkRectangle
+from cckk import cckkImage, cckkShape
 
 
 class test_cckkImage(unittest.TestCase):
@@ -78,11 +78,11 @@ class test_cckkImage(unittest.TestCase):
     def test_cckkImage_get_rect(self):
         img_str = "rgb\ncym\nxw."
         img = cckkImage(imgStr=img_str)
-        sub_rect = cckkRectangle(1, 1, 2, 2)
+        sub_rect = cckkShape(1, 1, 2, 2)
         self.assertEqual(img.get_sub_image(sub_rect).export_as_string(), "b")
-        sub_rect = cckkRectangle(2, 2, 1, 1)
+        sub_rect = cckkShape(2, 2, 1, 1)
         self.assertEqual(img.get_sub_image(sub_rect).export_as_string(), "gb\nym")
-        sub_rect = cckkRectangle(1, 2, 2, 1)
+        sub_rect = cckkShape(1, 2, 2, 1)
         self.assertEqual(img.get_sub_image(sub_rect).export_as_string(), "b\nm")
 
     def test_cckkImage_overlap(self):

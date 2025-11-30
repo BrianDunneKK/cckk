@@ -5,11 +5,31 @@
 import copy
 import time
 
-class cckkRectangle:
-    _next_ID = 1
+class cckkShape:
+    _next_id = 1
+    _all_by_id = {}
+    _all_by_name = {}
+
+    def find(id: int = None, name: str = None) -> "cckkShape":
+        """Find a cckkShape object by its ID and/or name
+
+        Args:
+        id: ID of the object ot find (takes precedence)
+        name: Name of the object to find
+
+        Returns:
+        cckkShape object, or None if not found
+        """
+        ret_obj = None
+        if id is not None:
+            ret_obj = cckkShape._all_by_id.get(id, None)
+        if ret_obj is None and name is not None:
+            ret_obj = cckkShape._all_by_name.get(name, None)
+
+        return ret_obj
 
     def __init__(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0, name: str = None):
-        """Contructs a cckkRectangle object.
+        """Contructs a cckkShape object.
 
         Args:# - Make Senset
         xcols: Number of columns in the rectangle
@@ -19,18 +39,27 @@ class cckkRectangle:
         name: Name of the image
 
         Returns:
-        cckkRectangle  object
+        cckkShape  object
 
         Raises:
         Exception: Never
         """
-        self._id = cckkRectangle._next_ID
-        cckkRectangle._next_ID += 1
+        self._id = cckkShape._next_id
+        cckkShape._next_id += 1
         self._name = name if name is not None else f"{self._id:>04}"
-        self._assoc = {} # Dictionary of associated objects, such as the images linked to a viewer
+        self._assocs = []    # Stack of associated objects, such as the images linked to a viewer.
+        # Each entry is a dictionary that includes the id and/or name of the object.
+
         self.set(xcols, yrows, xpos, ypos)
 
-    def set(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0) -> "cckkRectangle":
+        if self._id in cckkShape._all_by_id:
+            raise Exception("cckkShape ID already exists")
+        if self._name in cckkShape._all_by_name:
+            raise Exception("cckkShape name already exists")
+        cckkShape._all_by_id[self._id] = self
+        cckkShape._all_by_name[self._name] = self
+
+    def set(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0) -> "cckkShape":
         self._xcols = xcols  # No. of columns in the rectangle
         self._yrows = yrows  # No. of rows in the rectangle
         self._xpos = xpos  # X-position of the rectangle
@@ -83,56 +112,125 @@ class cckkRectangle:
     @property
     def name(self) -> str:
         return self._name
-    
+
     @property
     def id(self) -> int:
         return self._id
 
     def __eq__(self, other : object):
-        if not isinstance(other, cckkRectangle):
+        if not isinstance(other, cckkShape):
             # Don't attempt to compare against unrelated types
             return NotImplemented
 
         return self.xpos == other.xpos and self.ypos == other.ypos and self.xcols == other.xcols and self.yrows == other.yrows
 
-    def _add_assoc(self, assoc: "cckkRectangle") -> "cckkRectangle":  
-        """Add an associated object to the rectangle
+    def _get_assoc(self, id: int = None, name: str = None) -> dict:
+        """Find the associated object dictionary, using either its ID (if provided) or nane
 
         Args:
-        assoc: Object to associate with the rectangle
+        id: ID of the associated object
+        name: Name of the associated object
 
         Returns:
-        cckkRectangle object
+        Associated object dictionary, or None if not found
         """
-        self._assoc[assoc.id] = assoc
-        return self 
+        ret_dic = None
+        if id is not None:
+            for assoc in self.assocs:
+                if assoc.get("id", None) == id:
+                    ret_dic = assoc
 
-    def _get_assoc(self, assoc_id: int) -> "cckkRectangle":
-        """Get an associated object
+        if ret_dic is None and name is not None:
+            for assoc in self.assocs:
+                if assoc.get("name", None) == name:
+                    ret_dic = assoc
+
+        return ret_dic
+
+    def _add_assoc(self, assoc: dict, add_to_start: bool = True) -> "cckkShape":
+        """Add an associated object dictionary to the rectangle
 
         Args:
-        assoc_id: ID of the associated object to get
+        assoc: Dictionary representing the associated object
+        add_to_start: If True, adds the associated object to the start of the list. If False, adds to the end.
 
         Returns:
-        Associated object, or None if not found
+        cckkShape object
         """
-        if assoc_id in self._assoc:
-            return self._assoc[assoc_id]
+        if assoc.get("id", None) is None and assoc.get("name", None) is None:
+            raise Exception("Either ID or name must be provided for an associated object")
+
+        if add_to_start:
+            self._assocs.insert(0, assoc)
         else:
-            return None
-        
+            self._assocs.append(assoc)
+        return self
+
     @property
-    def assoc_values(self) -> ["cckkRectangle"]:
-        """Get the list of associated objects"""
-        return self._assoc.values()
-    
+    def assocs(self) -> list[dict]:
+        return self._assocs
+
+    @property
+    def assoc_values(self) -> list["cckkShape"]:
+        assoc_objs = []
+        for assoc in self._assocs:
+            obj = cckkShape.find(id=assoc.get("id", None), name=assoc.get("name", None))
+            assoc_objs.append(obj)
+        return assoc_objs
+        # return [cckkShape.find(id=assoc.id, name=assoc.name) for assoc in self._assocs]
+
+    def _update_assoc(self, id: int = None, name: str = None, attribute:str = None, value = None) -> dict:
+        """Update an attribute of an associated object dictionary
+
+        Args:
+        id: ID of the associated object
+        name: Name of the associated object
+        attribute: Attribute name to update
+        value: New value for the attribute
+
+        Returns:
+        cckkShape object
+        """
+        assoc = self._get_assoc(id, name)
+        if assoc is not None:
+            assoc[attribute] = value
+        return self
+
+    def get_assoc_ids(self, below_id: int = None, below_name: str = None) -> list[int]:
+        assoc_ids = []
+        found = False
+        if below_id is None and below_name is None:
+            found = True
+
+        for assoc in self._assocs:
+            if found:
+                assoc_ids.append(assoc.get("id", None))
+            elif assoc.get("id", None) == below_id or assoc.get("name", None) == below_name:
+                found = True
+            
+        return assoc_ids
+
+    def get_assoc_names(self, below_id: int = None, below_name: str = None) -> list[int]:
+        assoc_names = []
+        found = False
+        if below_id is None and below_name is None:
+            found = True
+
+        for assoc in self._assocs:
+            if found:
+                assoc_names.append(assoc.get("name", None))
+            elif assoc.get("id", None) == below_id or assoc.get("name", None) == below_name:
+                found = True
+            
+        return assoc_names
+
     def move_to(self, xpos, ypos = None, keep_rect=None):
         """Move the image to the specified position
 
         Args:
         xpos: New x-position. if a tuple with the format (x,y), use this as the position
         ypos: New y-position
-        keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
+        keep_rect: cckkShape object. If specified, keeps the image fully within the keep_rect area
 
         Returns:
         cckkImage object
@@ -154,7 +252,7 @@ class cckkRectangle:
         Args:
         dx: Change in x-position. if a tuple with the format (ddx,dy), use this as the position delta
         dy: Change in y-position
-        keep_rect: cckkRectangle object. If specified, keeps the image fully within the keep_rect area
+        keep_rect: cckkShape object. If specified, keeps the image fully within the keep_rect area
 
         Returns:
         cckkImage object
@@ -169,17 +267,17 @@ class cckkRectangle:
         self.keep_within(keep_rect)
         return self
 
-    def align(self, align_rect: "cckkRectangle", horiz: str = "C", vert: str = "C", keep_rect: "cckkRectangle" = None):
+    def align(self, align_rect: "cckkShape", horiz: str = "C", vert: str = "C", keep_rect: "cckkShape" = None):
         """Align the rectangle relative to another rectangle
         
         Args:
-        align_rect: cckkRectangle object representing the rectangle to align to
+        align_rect: cckkShape object representing the rectangle to align to
         horiz: Rectangle horizontal alignment relative to selected rectangle.  Contains "L", "C" or "R" (left, centre, right)
         vert: Rectangle vertical alignment relative to selected rectangle. Contains "T", "C" or "B" (top, centre, bottom)
-        keep_rect: cckkRectangle object representing the rectangle to keep this rectangle within
+        keep_rect: cckkShape object representing the rectangle to keep this rectangle within
 
         Returns:
-        cckkRectangle object
+        cckkShape object
         """
         if horiz.upper() == "L":
             self.xpos = align_rect.xpos
@@ -202,15 +300,15 @@ class cckkRectangle:
 
         return self
 
-    def keep_within(self, outer_rect=None) -> "cckkRectangle":
+    def keep_within(self, outer_rect=None) -> "cckkShape":
         """Adjust the rectangle position to keep it fully within another rectangle.
         Test bottom-right first so that top-left correction is not overridden
 
         Args:
-        outer_rect: cckkRectangle object representing the outer rectangle
+        outer_rect: cckkShape object representing the outer rectangle
 
         Returns:
-        cckkRectangle object
+        cckkShape object
         """
         if outer_rect is not None:
             if self.xpos + self.xcols > outer_rect.xpos + outer_rect.xcols:
@@ -226,7 +324,7 @@ class cckkRectangle:
 
     def str(self) -> str:
         return (
-            "cckkRectangle: "
+            "cckkShape: "
             + str(self.xcols)
             + " x "
             + str(self.yrows)
@@ -237,14 +335,14 @@ class cckkRectangle:
             + ")\n"
         )
 
-    def overlap(self, other_rect) -> "cckkRectangle":
+    def overlap(self, other_rect) -> "cckkShape":
         """Calculate the intersection of this rectangle with another rectangle
 
         Args:
-        other_rect: cckkRectangle object representing the other rectangle
+        other_rect: cckkShape object representing the other rectangle
 
         Returns:
-        cckkRectangle object representing the intersection rectangle, or None if there is no intersection
+        cckkShape object representing the intersection rectangle, or None if there is no intersection
         """
         inter_xpos = max(self.xpos, other_rect.xpos)
         inter_ypos = max(self.ypos, other_rect.ypos)
@@ -254,7 +352,7 @@ class cckkRectangle:
                          other_rect.ypos + other_rect.yrows)
 
         if inter_xend > inter_xpos and inter_yend > inter_ypos:
-            return cckkRectangle(
+            return cckkShape(
                 xcols=inter_xend - inter_xpos,
                 yrows=inter_yend - inter_ypos,
                 xpos=inter_xpos,
@@ -263,9 +361,9 @@ class cckkRectangle:
         else:
             return None
 
-    def calculate_mer(rectangles=[]) -> "cckkRectangle":
+    def calculate_mer(rectangles=[]) -> "cckkShape":
         """Calculate the minimum enclosing rectangle of a list of rectangles"""
-        mer = cckkRectangle()
+        mer = cckkShape()
         if len(rectangles) > 0:
             min_xpos = min([rect.xpos for rect in rectangles])
             min_ypos = min([rect.ypos for rect in rectangles])
@@ -279,39 +377,53 @@ class cckkRectangle:
             )
         return mer
 
-class cckkLayer:
-    # Class representation of an image layer
-    def __init__(self, img_id: int, img_name: str, visible: bool = True):
-        self._img_id = img_id
-        self._img_name = img_name
-        self.visible = visible
-    
-    @property
-    def id(self) -> int:
-        return self._img_id
-    
-    @property
-    def name(self) -> str:
-        return self._img_name
-        
-    def show(self) -> "cckkLayer":
-        self.visible = True
-        return self
-        
-    def hide(self) -> "cckkLayer":
-        self.visible = False
-        return self
+    def get_by_id(rect_id: int) -> "cckkShape":
+        """Get a cckkShape object by its ID
+
+        Args:
+        rect_id: ID of the rectangle to get
+
+        Returns:
+        cckkShape object, or None if not found
+        """
+        if rect_id in cckkShape._all_by_id:
+            return cckkShape._all_by_id[rect_id]
+        else:
+            return None
+
+    def get_by_name(name: str) -> "cckkShape":
+        """Get a cckkShape object by its name
+
+        Args:
+        name: Name of the rectangle to get
+
+        Returns:
+        cckkShape object, or None if not found
+        """
+        if name in cckkShape._all_by_name:
+            return cckkShape._all_by_name[name]
+        else:
+            return None
+
+class cckkLayerFactory:
+    # Create a dictionary that represents an image layer
+    def create(id: int = None, name: str = None, visible: bool = True):
+        return {
+            "id": id,
+            "name": name,
+            "visible": visible
+        }
 
 class cckkAction:
-    _next_action_ID = 1
+    _next_action_id = 1
 
     # Class representation of a viewer action
     def __init__(self, action: str, target: str = None, context: dict = None):
-        self._action_id = cckkAction._next_action_ID
+        self._action_id = cckkAction._next_action_id
         self._action = action
         self._target = target
         self._context = context
-        cckkAction._next_action_ID += 1
+        cckkAction._next_action_id += 1
     
     @property
     def id(self) -> int:
@@ -336,7 +448,7 @@ class cckkCondition:
         self,
         unless_overlap: list[str] = None,
         only_if_overlap: list[str] = None,
-        keep_within: cckkRectangle = None
+        keep_within: cckkShape = None
     ):
         self._unless_overlap = unless_overlap
         self._only_if_overlap = only_if_overlap
@@ -351,15 +463,15 @@ class cckkCondition:
         return self._only_if_overlap
 
     @property
-    def keep_within(self) -> cckkRectangle:
+    def keep_within(self) -> cckkShape:
         return self._keep_within
 
 
-class cckkViewer(cckkRectangle):
+class cckkViewer(cckkShape):
     # Class representation of a viewer of images for display on a SenseHat
     # The viewer represents the view area through which an image is seen. This view can be displayed on a SenseHat LED matrix.
     # The viewer can contain multiple images, which are layered on top of each other.
-    # The base class cckkRectangle is used to represent the viewer size and position.
+    # The base class cckkShape is used to represent the viewer size and position.
     ##############################################################################################
 
     """Class representation of a viewer of images for display on a SenseHat"""
@@ -383,11 +495,10 @@ class cckkViewer(cckkRectangle):
         Raises:
         Exception: Never
         """
-        super().__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos, name=name)  # Initialize cckkRectangle base class
+        super().__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos, name=name)  # Initialize cckkShape base class
 
         self._fill = fill  # Fill colour if the image does not fill the viewer
-        self._mer_rect = cckkRectangle()  # Minimum enclosing rectangle of the images
-        self._layers = [] # Stack of cckkLayer objects representing image layers in the viewer. First layer in the list is at the *top*.
+        self._mer_rect = cckkShape()  # Minimum enclosing rectangle of the images
         self._actions = [] # Stack of cckkAction objects representing actions carried out in the viewer
 
         self.add_images(images)
@@ -400,7 +511,7 @@ class cckkViewer(cckkRectangle):
         return [self._fill] * (self.xcols * self.yrows)
 
     def _add_action(self, action: str, target: str = None, context = None):
-        self._actions.append(cckkAction(action:=action, target=target, context=context))
+        self._actions.append(cckkAction(action=action, target=target, context=context))
 
     @property
     def lastAction(self):
@@ -421,9 +532,11 @@ class cckkViewer(cckkRectangle):
         for img in reversed(images):
             if not isinstance(img, cckkImage):
                 raise Exception("Invalid image specified")
-            self._add_assoc(img)
-            self._layers.insert(0, cckkLayer(img_id=img.id, img_name=img.name, visible=True)) # Add new layers at the front
-        self._mer_rect = cckkRectangle.calculate_mer(self.assoc_values)
+            self._add_assoc(
+                cckkLayerFactory.create(id=img.id, name=img.name, visible=True),
+                add_to_start=True,
+            )  # Add new layers at the front
+        self._mer_rect = cckkShape.calculate_mer(self.assoc_values)
         return self
 
     def align_to_img(self, img_name: str = "", horiz: str = "C", vert: str = "C", keep_img_name: str = None):
@@ -454,9 +567,14 @@ class cckkViewer(cckkRectangle):
         """
         view_img = cckkImage(imgA=self.background, img_cols=self.xcols)
 
-        for layer in reversed(self._layers): # Start with the bottom layer and paint each one on top
-            if layer.visible:
-                img = self._get_assoc(layer.id)
+
+        for layer in reversed(self.assocs): # Start with the bottom layer and paint each one on top
+            if layer.get("visible", False):
+                _id = layer.get("id", None)
+                _name = layer.get("name", None)
+                img = cckkShape.find(id=_id, name=_name)
+                if img is not None and not isinstance(img, cckkImage):
+                    raise Exception("Invalid image associated with viewer")
                 for yrow in range(self.yrows):
                     for xcol in range(self.xcols):
                         xcol_img = self.xpos + xcol - img.xpos
@@ -503,53 +621,8 @@ class cckkViewer(cckkRectangle):
         self._add_action( action="MoveViewer", target="self", context={"before": (self.xpos, self.ypos)})
         super().move(dx, dy, self._mer_rect if keep else None)
 
-
-    def _find_layer(self, name):
-        """Find a image layer in the viewer by name
-
-        Args:
-        name: Name of the image layer to find
-
-        Returns:
-        cckkLayer representing the layer, or None if not found
-        """
-        for layer in self._layers:
-            if layer.name == name:
-                return layer
-        return None
-
-    def _find_image_id(self, name: str, id_if_not_found: int = -1) -> str:
-        """Find an image in the viewer by name
-
-        Args:
-        name: Name of the image to find
-        id_if_not_found: ID to return if name is not found
-
-        Returns:
-        ID of the image in the viewer's image list, or -1 if not found
-        """
-        layer = self._find_layer(name)
-        if layer is None:
-            return id_if_not_found
-        else:
-            return layer.id
-
-    def find_image(self, name: str, id_if_not_found: int = -1) -> "cckkImage":
-        """Find an image in the viewer by name
-
-        Args:
-        name: Name of the image to find
-        id_if_not_found: ID of the image to return if name is not found
-
-        Returns:
-        cckkImage object in the viewer's image list, or None if not found
-        """
-        idx = self._find_image_id(name, id_if_not_found)
-        if idx >= 0:
-            return self._get_assoc(idx)
-            #return self._images[idx]
-        else:
-            return None
+    def find_image(self, name: str) -> "cckkImage":
+        return cckkShape.get_by_name(name)
 
     def find_images(self, name_list):
         img_list = []
@@ -561,26 +634,14 @@ class cckkViewer(cckkRectangle):
         return img_list
 
     def _find_below(self, name):
-        name_list = []
-        found = False
-        for layer in self._layers:
-            if layer.name == name:
-                found = True
-            elif found == True:
-                name_list.append(layer.name)
-
-        return name_list
+        return self.get_assoc_names(below_name=name)
 
     def hide_image(self, name):
-        layer = self._find_layer(name)
-        if layer is not None:
-            layer.hide()
+        self._update_assoc(name=name, attribute="visible", value=False)
         return self
 
     def show_image(self, name):
-        layer = self._find_layer(name)
-        if layer is not None:
-            layer.show()
+        self._update_assoc(name=name, attribute="visible", value=True)
         return self
 
     def move_to_img(self, name, xpos, ypos=None, keep=False):
@@ -834,9 +895,9 @@ class cckkColourDict:
         return self.reverse_dict.get(pixel, "?")
 
 
-class cckkImage(cckkRectangle):
+class cckkImage(cckkShape):
     # Class representation of an image
-    # The base class cckkRectangle is used to represent the image size and position.
+    # The base class cckkShape is used to represent the image size and position.
     ##############################################################################################
 
     """Class representation of an image"""
@@ -869,7 +930,7 @@ class cckkImage(cckkRectangle):
         Raises:
         Exception: If invalid image specified
         """
-        super().__init__(name=name)  # Initialize cckkRectangle base class
+        super().__init__(name=name)  # Initialize cckkShape base class
         self._imgAA = None  # Two-dimensional array of image pixels
         self._colour_dict = colour_dict  # Colour dictionary
 
@@ -1048,7 +1109,7 @@ class cckkImage(cckkRectangle):
         """Get a sub-image from the image
 
         Args:
-        sub_rect: cckkRectangle object representing the sub-image area
+        sub_rect: cckkShape object representing the sub-image area
 
         Returns:
         cckkImage object representing the sub-image
@@ -1185,7 +1246,7 @@ class cckkImage(cckkRectangle):
         Returns:
         cckkImage object representing the intersection image, or None if there is no intersection
         """
-        other_mer = cckkRectangle.calculate_mer(other_imgs)
+        other_mer = cckkShape.calculate_mer(other_imgs)
         overlap_rect = super().overlap(other_mer)
         if overlap_rect is not None:
             inter_imgAA = []
@@ -1240,7 +1301,7 @@ class cckkImage(cckkRectangle):
         Number of pixels in this image that overlap with any pixel in the other images
         """
         pixel_count = 0
-        other_mer = cckkRectangle.calculate_mer(other_imgs)
+        other_mer = cckkShape.calculate_mer(other_imgs)
         overlap_rect = super().overlap(other_mer)
         if overlap_rect is not None:
             inter_imgAA = []
