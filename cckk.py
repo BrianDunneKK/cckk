@@ -1,9 +1,71 @@
 ### To Do
 # - Move keep into cckkCondition for move_ing(), etc ... implement keep_within
 # - Add cckkCondition to cckkViewer.move() and .move_to()
+# - Replace find_images() with find_multi()
 
 import copy
 import time
+
+class cckkAction:
+    _next_action_id = 1
+
+    def last_action_id() -> int:
+        return cckkAction._next_action_id
+
+    # Class representation of a viewer action
+    def __init__(self, action: str, target_id:int = None, target_name: str = None, context: dict = None):
+        self._action_id = cckkAction._next_action_id
+        self._action = action
+        self._target_id = target_id
+        self._target_name = target_name
+        self._context = context
+        cckkAction._next_action_id += 1
+    
+    @property
+    def id(self) -> int:
+        return self._action_id
+    
+    @property
+    def action(self) -> str:
+        return self._action
+        
+    @property
+    def target_id(self) -> str:
+        return self._target_id
+
+    @property
+    def target_name(self) -> str:
+        return self._target_name
+
+    @property
+    def context(self) -> dict:
+        return self._context
+
+
+class cckkCondition:
+    # Class representation of condition impacting an action
+    def __init__(
+        self,
+        unless_overlap: list[str] = None,
+        only_if_overlap: list[str] = None,
+        keep_rect: "cckkShape" = None
+    ):
+        self._unless_overlap = unless_overlap
+        self._only_if_overlap = only_if_overlap
+        self._keep_rect = keep_rect
+
+    @property
+    def unless_overlap(self) -> list[str]:
+        return self._unless_overlap
+
+    @property
+    def only_if_overlap(self) -> list[str]:
+        return self._only_if_overlap
+
+    @property
+    def keep_rect(self) -> "cckkShape":
+        return self._keep_rect
+
 
 class cckkShape:
     _next_id = 1
@@ -23,19 +85,34 @@ class cckkShape:
         ret_obj = None
         if id is not None:
             ret_obj = cckkShape._all_by_id.get(id, None)
-        if ret_obj is None and name is not None:
+        elif ret_obj is None and name is not None:
             ret_obj = cckkShape._all_by_name.get(name, None)
 
         return ret_obj
+    
+    def find_multi(self, id_list: list[int] = None, name_list: list[str] = None) -> list["cckkShape"]:
+        shape_list = []
+
+        if id_list is not None:
+            for id in id_list:         
+                shape = cckkShape.find(id=id)
+                if shape is not None:
+                    shape_list.append(shape)
+        elif name_list is not None:
+            for name in name_list:         
+                shape = cckkShape.find(name=name)
+                if shape is not None:
+                    shape_list.append(shape)
+        return shape_list
 
     def __init__(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0, name: str = None):
         """Contructs a cckkShape object.
 
         Args:# - Make Senset
-        xcols: Number of columns in the rectangle
-        yrows: Number of rows in the rectangle
-        xpos: X-position of the rectangle
-        ypos: Y-position of the rectangle
+        xcols: Number of columns in the shape
+        yrows: Number of rows in the shape
+        xpos: X-position of the shape
+        ypos: Y-position of the shape
         name: Name of the image
 
         Returns:
@@ -49,6 +126,8 @@ class cckkShape:
         self._name = name if name is not None else f"{self._id:>04}"
         self._assocs = []    # Stack of associated objects, such as the images linked to a viewer.
         # Each entry is a dictionary that includes the id and/or name of the object.
+        self._mer_rect = None  # Minimum enclosing rectangle of the associated shapes
+        self._actions = [] # Stack of cckkAction objects representing actions carried out on this and associated objects
 
         self.set(xcols, yrows, xpos, ypos)
 
@@ -60,15 +139,15 @@ class cckkShape:
         cckkShape._all_by_name[self._name] = self
 
     def set(self, xcols: int = 0, yrows: int = 0, xpos: int = 0, ypos: int = 0) -> "cckkShape":
-        self._xcols = xcols  # No. of columns in the rectangle
-        self._yrows = yrows  # No. of rows in the rectangle
-        self._xpos = xpos  # X-position of the rectangle
-        self._ypos = ypos  # Y-position of the rectangle
+        self._xcols = xcols  # No. of columns in the shape
+        self._yrows = yrows  # No. of rows in the shape
+        self._xpos = xpos  # X-position of the shape
+        self._ypos = ypos  # Y-position of the shape
         return self
 
     @property
     def xcols(self) -> int:
-        """No. of columns in the rectangle"""
+        """No. of columns in the shape"""
         return self._xcols
 
     @xcols.setter
@@ -77,7 +156,7 @@ class cckkShape:
 
     @property
     def yrows(self) -> int:
-        """No. of rows in the rectangle"""
+        """No. of rows in the shape"""
         return self._yrows
 
     @yrows.setter
@@ -117,6 +196,13 @@ class cckkShape:
     def id(self) -> int:
         return self._id
 
+    @property
+    def last_action_id(self):
+        if len(self._actions) > 0:
+            return self._actions[-1].id
+        else:
+            return 0
+
     def __eq__(self, other : object):
         if not isinstance(other, cckkShape):
             # Don't attempt to compare against unrelated types
@@ -148,7 +234,7 @@ class cckkShape:
         return ret_dic
 
     def _add_assoc(self, assoc: dict, add_to_start: bool = True) -> "cckkShape":
-        """Add an associated object dictionary to the rectangle
+        """Add an associated object dictionary to the shape
 
         Args:
         assoc: Dictionary representing the associated object
@@ -164,6 +250,9 @@ class cckkShape:
             self._assocs.insert(0, assoc)
         else:
             self._assocs.append(assoc)
+
+        self._mer_rect = cckkShape.calculate_mer(self.assoc_values)
+
         return self
 
     @property
@@ -207,7 +296,7 @@ class cckkShape:
                 assoc_ids.append(assoc.get("id", None))
             elif assoc.get("id", None) == below_id or assoc.get("name", None) == below_name:
                 found = True
-            
+
         return assoc_ids
 
     def get_assoc_names(self, below_id: int = None, below_name: str = None) -> list[int]:
@@ -221,20 +310,75 @@ class cckkShape:
                 assoc_names.append(assoc.get("name", None))
             elif assoc.get("id", None) == below_id or assoc.get("name", None) == below_name:
                 found = True
-            
+
         return assoc_names
 
-    def move_to(self, xpos, ypos = None, keep_rect=None):
-        """Move the image to the specified position
+    def add_action(self, action: str = "move", target_id: int = None, target_name: str = None, context: dict = None):
+        if target_id is None and target_name is None:
+            target_id = self.id
+            target_name = self.name
+
+        if action == "move" and context is None:
+            context = {"before": (self.xpos, self.ypos)}
+
+        self._actions.append(cckkAction(action=action, target_id=target_id, target_name=target_name, context=context))
+        return self
+
+    def add_assoc_action(self, action: str = "move", assoc_id: int = None, assoc_name: str = None, context: dict = None):
+        assoc = self._get_assoc(id=assoc_id, name=assoc_name)
+        if assoc is None:
+            raise Exception("Associated object not found")
+        assoc_id = assoc.get("id", None)
+        assoc_name = assoc.get("name", None)
+
+        shape = cckkShape.find(id=assoc_id, name=assoc_name)
+
+        if action == "move" and context is None:
+            context = {"before": (shape.xpos, shape.ypos)}
+
+        self._actions.append(cckkAction(action=action, target_id=assoc_id, target_name=assoc_name, context=context))
+        return shape
+
+    def overlap_multi_count(self, other_shapes):
+        """Count the overlap a stack of other shapes. Placeholder in cckkShape.
+
+        Args:
+        other_shapes: Stack (list) of cckkShape objects
+
+        Returns: 0
+        """
+        return 0
+
+    def undo(self):
+        dealt_with = False
+        action = self._actions[-1] 
+
+        match action.action:
+            case "move":
+                shape = cckkShape.find(id=action.target_id, name=action.target_name)
+                shape.move_to(action.context["before"])
+                dealt_with = True
+
+        if dealt_with:
+            self._actions.pop() 
+
+        return dealt_with
+
+    def move_to(self, xpos: int | tuple[int, int], ypos: int = None,
+                keep_rect: "cckkShape" = None, keep_within: bool = False, condition: cckkCondition = None):
+        """Move the shape to the specified position
 
         Args:
         xpos: New x-position. if a tuple with the format (x,y), use this as the position
         ypos: New y-position
         keep_rect: cckkShape object. If specified, keeps the image fully within the keep_rect area
+        keep_within: If True, keeps the shape fully within the MER of the associated shapes
 
         Returns:
-        cckkImage object
+        cckkShape object
         """
+        self.add_action()
+
         if isinstance(xpos, tuple) and len(xpos) == 2:
             xpos, ypos = xpos
 
@@ -243,38 +387,83 @@ class cckkShape:
         if ypos is not None:
             self.ypos = ypos
 
-        self.keep_within(keep_rect)
+        if condition is not None:
+            if condition.unless_overlap is not None and len(condition.unless_overlap) > 0:
+                shapes = self.find_multi(name_list=condition.unless_overlap)
+                if self.overlap_multi_count(shapes) > 0:
+                    self.undo()
+
+            if condition.only_if_overlap is not None and len(condition.only_if_overlap) > 0:
+                shapes = self.find_multi(name_list=condition.only_if_overlap)
+                if self.overlap_multi_count(shapes) == 0:
+                    self.undo()
+
+
+        self.keep_within(keep_rect, keep_within)
         return self
 
-    def move(self, dx, dy=None, keep_rect=None):
-        """Move the image (relative to the viewer)
+    def move(self, dx: int | tuple[int, int], dy: int = None,
+             keep_rect: "cckkShape" = None, keep_within: bool = False, condition: cckkCondition = None):
+        """Move the shape
 
         Args:
         dx: Change in x-position. if a tuple with the format (ddx,dy), use this as the position delta
         dy: Change in y-position
         keep_rect: cckkShape object. If specified, keeps the image fully within the keep_rect area
+        keep_within: If True, keeps the shape fully within the MER of the associated shapes
 
         Returns:
-        cckkImage object
+        cckkShape object
         """
         if isinstance(dx, tuple) and len(dx) == 2:
             dx, dy = dx
 
-        if dx is not None:
-            self.xpos += dx
-        if dy is not None:
-            self.ypos += dy
-        self.keep_within(keep_rect)
+        xpos = self.xpos + (dx if dx is not None else 0)
+        ypos = self.ypos + (dy if dy is not None else 0)
+
+        self.move_to(xpos, ypos, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
         return self
 
-    def align(self, align_rect: "cckkShape", horiz: str = "C", vert: str = "C", keep_rect: "cckkShape" = None):
-        """Align the rectangle relative to another rectangle
+    def move_to_assoc(self, xpos: int | tuple[int, int], ypos: int = None,
+                      keep_rect: "cckkShape" = None, keep_within: bool = False, condition: cckkCondition = None,
+                      assoc_id: int = None, assoc_name: str = None):
+        """Move the associated shape to the specified position
+
+        Returns:
+        Associated cckkShape object
+        """
+        assoc_shape = self.add_assoc_action(assoc_id=assoc_id, assoc_name=assoc_name)
+
+        if assoc_shape is not None:
+            assoc_shape.move_to(xpos, ypos, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
+
+        return assoc_shape
+
+    def move_assoc(self, dx: int | tuple[int, int], dy: int = None,
+                   keep_rect: "cckkShape" = None, keep_within: bool = False, condition: cckkCondition = None,
+                   assoc_id: int = None, assoc_name: str = None):
+        """Move the associated shape
+
+        Returns:
+        Associated cckkShape object
+        """
+        assoc_shape = self.add_assoc_action(assoc_id=assoc_id, assoc_name=assoc_name)
+
+        if assoc_shape is not None:
+            assoc_shape.move(dx, dy, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
+
+        return assoc_shape
+
+    def align(self, align_rect: "cckkShape", horiz: str = "C", vert: str = "C",
+              keep_rect: "cckkShape" = None, keep_within: bool = False):
+        """Align the shape relative to another shape
         
         Args:
-        align_rect: cckkShape object representing the rectangle to align to
-        horiz: Rectangle horizontal alignment relative to selected rectangle.  Contains "L", "C" or "R" (left, centre, right)
-        vert: Rectangle vertical alignment relative to selected rectangle. Contains "T", "C" or "B" (top, centre, bottom)
-        keep_rect: cckkShape object representing the rectangle to keep this rectangle within
+        align_rect: cckkShape object representing the shape to align to
+        horiz: Shape horizontal alignment relative to selected shape.  Contains "L", "C" or "R" (left, centre, right)
+        vert: Shape vertical alignment relative to selected shape. Contains "T", "C" or "B" (top, centre, bottom)
+        keep_rect: cckkShape object representing the shape to keep this shape within
+        keep_within: If True, keeps the shape fully within the MER of the associated shapes
 
         Returns:
         cckkShape object
@@ -296,53 +485,48 @@ class cckkShape:
                 int((align_rect.yrows - self.yrows) / 2)
 
         if keep_rect is not None:
-            self.keep_within(keep_rect)
+            self.keep_within(keep_rect, keep_within)
 
         return self
 
-    def keep_within(self, outer_rect=None) -> "cckkShape":
-        """Adjust the rectangle position to keep it fully within another rectangle.
+    def keep_within(self, keep_rect=None, keep_within: bool = False) -> "cckkShape":
+        """Adjust the shape position to keep it fully within another shape.
         Test bottom-right first so that top-left correction is not overridden
 
         Args:
-        outer_rect: cckkShape object representing the outer rectangle
+        outer_rect: cckkShape object representing the outer shape
+        keep_within: If True, keeps the shape fully within the MER of the associated shapes
 
         Returns:
         cckkShape object
         """
-        if outer_rect is not None:
-            if self.xpos + self.xcols > outer_rect.xpos + outer_rect.xcols:
-                self.xpos = outer_rect.xpos + outer_rect.xcols - self.xcols
-            if self.ypos + self.yrows > outer_rect.ypos + outer_rect.yrows:
-                self.ypos = outer_rect.ypos + outer_rect.yrows - self.yrows
-            if self.xpos < outer_rect.xpos:
-                self.xpos = outer_rect.xpos
-            if self.ypos < outer_rect.ypos:
-                self.ypos = outer_rect.ypos
+        if keep_rect is None and keep_within:
+            keep_rect = self._mer_rect
+
+        if keep_rect is not None:
+            if self.xpos + self.xcols > keep_rect.xpos + keep_rect.xcols:
+                self.xpos = keep_rect.xpos + keep_rect.xcols - self.xcols
+            if self.ypos + self.yrows > keep_rect.ypos + keep_rect.yrows:
+                self.ypos = keep_rect.ypos + keep_rect.yrows - self.yrows
+            if self.xpos < keep_rect.xpos:
+                self.xpos = keep_rect.xpos
+            if self.ypos < keep_rect.ypos:
+                self.ypos = keep_rect.ypos
 
         return self
 
     def str(self) -> str:
-        return (
-            "cckkShape: "
-            + str(self.xcols)
-            + " x "
-            + str(self.yrows)
-            + " at ("
-            + str(self.xpos)
-            + ","
-            + str(self.ypos)
-            + ")\n"
-        )
+        return ("cckkShape: " + str(self.xcols) + " x " + str(self.yrows) +
+                " at (" + str(self.xpos) + "," + str(self.ypos) + ")\n")
 
     def overlap(self, other_rect) -> "cckkShape":
-        """Calculate the intersection of this rectangle with another rectangle
+        """Calculate the intersection of this shape with another shape
 
         Args:
-        other_rect: cckkShape object representing the other rectangle
+        other_rect: cckkShape object representing the other shape
 
         Returns:
-        cckkShape object representing the intersection rectangle, or None if there is no intersection
+        cckkShape object representing the intersection shape, or None if there is no intersection
         """
         inter_xpos = max(self.xpos, other_rect.xpos)
         inter_ypos = max(self.ypos, other_rect.ypos)
@@ -361,14 +545,14 @@ class cckkShape:
         else:
             return None
 
-    def calculate_mer(rectangles=[]) -> "cckkShape":
-        """Calculate the minimum enclosing rectangle of a list of rectangles"""
+    def calculate_mer(shapes=[]) -> "cckkShape":
+        """Calculate the minimum enclosing rectangle of a list of shapes"""
         mer = cckkShape()
-        if len(rectangles) > 0:
-            min_xpos = min([rect.xpos for rect in rectangles])
-            min_ypos = min([rect.ypos for rect in rectangles])
-            max_xpos = max([rect.xpos + rect.xcols for rect in rectangles])
-            max_ypos = max([rect.ypos + rect.yrows for rect in rectangles])
+        if len(shapes) > 0:
+            min_xpos = min([shape.xpos for shape in shapes])
+            min_ypos = min([shape.ypos for shape in shapes])
+            max_xpos = max([shape.xpos + shape.xcols for shape in shapes])
+            max_ypos = max([shape.ypos + shape.yrows for shape in shapes])
             mer.set(
                 xcols=max_xpos - min_xpos,
                 yrows=max_ypos - min_ypos,
@@ -376,34 +560,6 @@ class cckkShape:
                 ypos=min_ypos,
             )
         return mer
-
-    def get_by_id(id: int) -> "cckkShape":
-        """Get a cckkShape object by its ID
-
-        Args:
-        id: ID of the rectangle to get
-
-        Returns:
-        cckkShape object, or None if not found
-        """
-        if id is not None and id in cckkShape._all_by_id:
-            return cckkShape._all_by_id[id]
-        else:
-            return None
-
-    def get_by_name(name: str) -> "cckkShape":
-        """Get a cckkShape object by its name
-
-        Args:
-        name: Name of the rectangle to get
-
-        Returns:
-        cckkShape object, or None if not found
-        """
-        if name is not None and name in cckkShape._all_by_name:
-            return cckkShape._all_by_name[name]
-        else:
-            return None
 
 class cckkLayerFactory:
     # Create a dictionary that represents an image layer
@@ -413,59 +569,6 @@ class cckkLayerFactory:
             "name": name,
             "visible": visible
         }
-
-class cckkAction:
-    _next_action_id = 1
-
-    # Class representation of a viewer action
-    def __init__(self, action: str, target: str = None, context: dict = None):
-        self._action_id = cckkAction._next_action_id
-        self._action = action
-        self._target = target
-        self._context = context
-        cckkAction._next_action_id += 1
-    
-    @property
-    def id(self) -> int:
-        return self._action_id
-    
-    @property
-    def action(self) -> str:
-        return self._action
-        
-    @property
-    def target(self) -> str:
-        return self._target
-
-    @property
-    def context(self) -> dict:
-        return self._context
-
-
-class cckkCondition:
-    # Class representation of condition impacting an action
-    def __init__(
-        self,
-        unless_overlap: list[str] = None,
-        only_if_overlap: list[str] = None,
-        keep_within: cckkShape = None
-    ):
-        self._unless_overlap = unless_overlap
-        self._only_if_overlap = only_if_overlap
-        self._keep_within = keep_within
-
-    @property
-    def unless_overlap(self) -> list[str]:
-        return self._unless_overlap
-
-    @property
-    def only_if_overlap(self) -> list[str]:
-        return self._only_if_overlap
-
-    @property
-    def keep_within(self) -> cckkShape:
-        return self._keep_within
-
 
 class cckkViewer(cckkShape):
     # Class representation of a viewer of images for display on a SenseHat
@@ -498,8 +601,6 @@ class cckkViewer(cckkShape):
         super().__init__(xcols=xcols, yrows=yrows, xpos=xpos, ypos=ypos, name=name)  # Initialize cckkShape base class
 
         self._fill = fill  # Fill colour if the image does not fill the viewer
-        self._mer_rect = cckkShape()  # Minimum enclosing rectangle of the images
-        self._actions = [] # Stack of cckkAction objects representing actions carried out in the viewer
 
         self.add_images(images)
 
@@ -510,15 +611,8 @@ class cckkViewer(cckkShape):
     def background(self):
         return [self._fill] * (self.xcols * self.yrows)
 
-    def _add_action(self, action: str, target: str = None, context = None):
-        self._actions.append(cckkAction(action=action, target=target, context=context))
-
-    @property
-    def lastAction(self):
-        if len(self._actions) > 0:
-            return self._actions[-1].id
-        else:
-            return 0
+    def _add_action(self, action: str, target_name: str = None, context = None):
+        self._actions.append(cckkAction(action=action, target_name=target_name, context=context))
 
     def add_images(self, images=[]):
         """Add images to the viewer
@@ -536,7 +630,6 @@ class cckkViewer(cckkShape):
                 cckkLayerFactory.create(id=img.id, name=img.name, visible=True),
                 add_to_start=True,
             )  # Add new layers at the front
-        self._mer_rect = cckkShape.calculate_mer(self.assoc_values)
         return self
 
     def align_to_img(self, img_name: str = "", horiz: str = "C", vert: str = "C", keep_img_name: str = None):
@@ -596,20 +689,20 @@ class cckkViewer(cckkShape):
         """View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat"""
         return self.view().pixels
 
-    def move_to(self, xpos, ypos=None, keep=False):
+    def move_to(self, xpos: int | tuple[int, int], ypos: int = None,
+                keep_rect: cckkShape = None, keep_within: bool = False, condition: cckkCondition = None):
         """Move the viewer to the specified position
 
         Args:
         xpos: New x-position
         ypos: New y-position
-        keep: If True, keeps the cammera over the MER of the images
+        keep_within: If True, keeps the cammera over the MER of the images
 
         Returns: self
         """
-        self._add_action(action="MoveViewer", target="self", context={ "before": (self.xpos, self.ypos) })
-        return super().move_to(xpos, ypos, self._mer_rect if keep else None)
+        return super().move_to(xpos, ypos, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
 
-    def move(self, dx, dy=None, keep=False):
+    def move(self, dx, dy=None, keep_rect: cckkShape = None, keep_within: bool = False, condition: cckkCondition = None):
         """Move the viewer
 
         Args:
@@ -619,11 +712,10 @@ class cckkViewer(cckkShape):
 
         Returns: self
         """
-        self._add_action( action="MoveViewer", target="self", context={"before": (self.xpos, self.ypos)})
-        super().move(dx, dy, self._mer_rect if keep else None)
+        super().move(dx, dy, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
 
     def find_image(self, name: str) -> "cckkImage":
-        return cckkShape.get_by_name(name)
+        return cckkShape.find(name=name)
 
     def find_images(self, name_list):
         img_list = []
@@ -645,30 +737,16 @@ class cckkViewer(cckkShape):
         self._update_assoc(name=name, attribute="visible", value=True)
         return self
 
-    def move_to_img(self, name, xpos, ypos=None, keep=False):
-        img = self.find_image(name)
-        if img is not None:
-            self._add_action(action="MoveImage", target=name
-                             ,context={ "before": (img.xpos, img.ypos) })
-            img.move_to(xpos, ypos, self._mer_rect if keep else None)
+    def move_to_img(self, name, xpos, ypos=None,
+                    keep_rect: cckkShape = None, keep_within: bool = False, condition: cckkCondition = None):
+        self.move_to_assoc(xpos=xpos, ypos=ypos,
+                           keep_rect=keep_rect, keep_within=keep_within, condition=condition, assoc_name=name)
         return self
 
-    def move_img(self, name: str, dx: int | tuple[int, int], dy: int = None, keep: bool = False, condition: cckkCondition = None):
-        img = self.find_image(name)
-        if img is not None:
-            self._add_action(action="MoveImage", target=name
-                             ,context={ "before": (img.xpos, img.ypos) })
-            img.move(dx, dy, self._mer_rect if keep else None)
-
-            if condition is not None:
-                if condition.unless_overlap is not None and len(condition.unless_overlap) > 0:
-                    if self.overlap_multi_count(name, condition.unless_overlap) > 0:
-                        self.undo()
-
-                if condition.only_if_overlap is not None and len(condition.only_if_overlap) > 0:
-                    if self.overlap_multi_count(name, condition.only_if_overlap) == 0:
-                        self.undo()
-
+    def move_img(self, name: str, dx: int | tuple[int, int], dy: int = None,
+                 keep_rect: cckkShape = None, keep_within: bool = False, condition: cckkCondition = None):
+        self.move_assoc(dx=dx, dy=dy, keep_rect=keep_rect,
+                        keep_within=keep_within, condition=condition, assoc_name=name)
         return self
 
     def align_image(self, name, horiz="C", vert="C"):
@@ -752,7 +830,7 @@ class cckkViewer(cckkShape):
         other_imgs = self.find_images(other_names)
         return img.overlap_multi(other_imgs)
 
-    def overlap_multi_count(self, name, other_names = None):
+    def overlap_multi_count_img(self, name, other_names = None):
         """Count the number of pixels that overlap with a stack of other images, ignoring transparent pixels
 
         Args:
@@ -797,18 +875,23 @@ class cckkViewer(cckkShape):
         return found
 
     def undo(self):
-        action = self._actions.pop() 
+        dealt_with = False
 
-        match action.action:
-            case "MoveViewer":
-                self.move_to(action.context["before"])
-            case "MoveImage":
-                self.move_to_img(name=action.target, xpos=action.context["before"], ypos=None)
-            case _:
-                # Unknown action
-                pass
+        if not super().undo():
+            action = self._actions[-1] 
 
-        return self
+            match action.action:
+                case "MoveImage":
+                    self.move_to_img(name=action.target_name, xpos=action.context["before"], ypos=None)
+                    dealt_with = True
+                case _:
+                    # Unknown action
+                    pass
+
+            if dealt_with:
+                self._actions.pop()
+
+        return dealt_with
 
     def export_as_string(self):
         """Export the viewer's current view as a string representation

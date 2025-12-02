@@ -5,24 +5,27 @@ from cckk import cckkImage, cckkViewer, cckkAction, cckkCondition, cckkColourDic
 class test_cckkViewer(unittest.TestCase):
 
     def test_cckkAction_id(self):
-        a1 = cckkAction("one")
-        a2 = cckkAction("two", "target2")
-        a3 = cckkAction("three", context=(2,3))
-        self.assertEqual(a1.id, 1)
-        self.assertEqual(a2.id, 2)
-        self.assertEqual(a3.id, 3)
-        self.assertEqual(a2.target, "target2")
+        start_id = cckkAction._next_action_id - 1
+        a1 = cckkAction(action="one")
+        a2 = cckkAction(action="two", target_name="target2")
+        a3 = cckkAction(action="three", context=(2,3))
+        self.assertEqual(a1.id, 1+start_id)
+        self.assertEqual(a2.id, 2+start_id)
+        self.assertEqual(a3.id, 3+start_id)
+        self.assertEqual(a2.target_name, "target2")
         self.assertEqual(a3.context, (2,3))
 
     def test_cckkViewer_lastAction(self):
-        start_id = cckkAction._next_action_id - 1
+        start_id = cckkAction._next_action_id
         img = cckkImage(imgStr="rgb\ncym\nxw", name = "image_lastAction")
         viewer = cckkViewer(images=[img])
+        self.assertEqual(cckkAction.last_action_id(), 0+start_id)
         viewer.move(1,2)
-        self.assertEqual(viewer.lastAction, 1+start_id)
+        self.assertEqual(cckkAction.last_action_id(), 1+start_id) # Add 1 for move()
         viewer.move_to_img("image_lastAction", 3, 4)
+        self.assertEqual(cckkAction.last_action_id(), 3+start_id) # Add 2 for move_to() and move_to_assoc()
         viewer.move_img("image_lastAction", 5, 6)
-        self.assertEqual(viewer.lastAction, 3+start_id)
+        self.assertEqual(cckkAction.last_action_id(), 5+start_id)
 
     def test_cckkViewer_undo(self):
         img = cckkImage(imgStr="rgb\ncym\nxw")
@@ -139,11 +142,11 @@ rgbcymxw"""
 
         self.assertEqual(viewer.overlap_count("violet_mc", "one_mc"), 0)
         self.assertEqual(viewer.overlap_count("violet_mc", "two_mc"), 0)
-        self.assertEqual(viewer.overlap_multi_count("violet_mc", ["one_mc"]), 0)
-        self.assertEqual(viewer.overlap_multi_count("violet_mc", ["one_mc", "two_mc"]), 0)
+        self.assertEqual(viewer.overlap_multi_count_img("violet_mc", ["one_mc"]), 0)
+        self.assertEqual(viewer.overlap_multi_count_img("violet_mc", ["one_mc", "two_mc"]), 0)
 
         imgv.move_to(0,0)
-        self.assertEqual(viewer.overlap_multi_count("violet_mc", ["one_mc", "two_mc"]), 1)
+        self.assertEqual(viewer.overlap_multi_count_img("violet_mc", ["one_mc", "two_mc"]), 1)
 
     def test_cckkViewer_overlap_with(self):
         img1_str = "rgb\nc..\nxw."
