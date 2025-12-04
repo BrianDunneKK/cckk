@@ -1,4 +1,5 @@
 ### To Do
+# - keep_within for green dot not working
 # - Move keep into cckkCondition for move_ing(), etc ... implement keep_within
 # - Add cckkCondition to cckkViewer.move() and .move_to()
 # - Replace find_images() with find_multi()
@@ -450,7 +451,9 @@ class cckkShape:
         assoc_shape = self.add_assoc_action(assoc_id=assoc_id, assoc_name=assoc_name)
 
         if assoc_shape is not None:
-            assoc_shape.move(dx, dy, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
+            assoc_shape.move(dx, dy,
+                             keep_rect = self._mer_rect if (keep_rect is None and keep_within) else keep_rect,
+                             condition=condition)
 
         return assoc_shape
 
@@ -1673,6 +1676,10 @@ class cckkSenseHatEmu:
 
     def show_message(self, text_string:str, scroll_speed:float=0.1, text_colour:list=[255, 255, 255], back_colour:list=[0, 0, 0]):
         print(text_string)
+
+    def set_rotation(self, rotation:int):
+        pass
+
 
 
 if __name__ == '__main__':
