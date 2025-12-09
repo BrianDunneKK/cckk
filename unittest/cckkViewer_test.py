@@ -60,7 +60,7 @@ rgbcymxw"""
         self.assertEqual(viewer1.yrows, 8)
         self.assertEqual(viewer1.xpos, 0)
         self.assertEqual(viewer1.ypos, 0)
-  
+
     def test_cckkViewer_view(self):
         img_str = "rgb\ncym\nxw."
         img = cckkImage(imgStr=img_str)
@@ -81,7 +81,7 @@ rgbcymxw"""
         img_view = viewer.view()
         view_str = "rgb\nrgb\nrgb"
         self.assertEqual(img_view.export_as_string(), view_str)
-        
+
         viewer.hide_image("green_layers")
         img_view = viewer.view()
         view_str = "rrb\nrrb\nrrb"
@@ -197,25 +197,24 @@ rgbcymxw"""
         img_b = cckkImage(imgStr="b", name="blue")
         img_large = cckkImage(imgA=[(22,33,44)] * 400, name="large", img_cols=20)
         viewer2 = cckkViewer(images=[img_large,img_b], xcols=8, yrows=8)
+        cond = cckkCondition(keep_rect=img_large)
+        
         img_b.pos = (10,10)
-        viewer2.align(img_b, "C", "C", img_large)
+        viewer2.align(img_b, "C", "C", condition=cond)
         self.assertEqual(viewer2.pos, (7,7))
 
         img_b.pos = (3,3)
-        viewer2.align(img_b, "C", "C", img_large)
+        viewer2.align(img_b, "C", "C", condition=cond)
         self.assertEqual(viewer2.pos, (0,0))
 
         img_b.pos = (17,18)
-        viewer2.align(img_b, "C", "C", img_large)
+        viewer2.align(img_b, "C", "C", condition=cond)
         self.assertEqual(viewer2.pos, (12,12))
 
         img_b.pos = (3,18)
-        viewer2.align(img_b, "C", "C", img_large)
+        viewer2.align(img_b, "C", "C", condition=cond)
         self.assertEqual(viewer2.pos, (0,12))
 
 
 if __name__ == "__main__":
     unittest.main()
-
-
-

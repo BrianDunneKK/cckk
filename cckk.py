@@ -1,7 +1,4 @@
 ### To Do
-# - keep_within for green dot not working
-# - Move keep into cckkCondition for move_ing(), etc ... implement keep_within
-# - Add cckkCondition to cckkViewer.move() and .move_to()
 # - Replace find_images() with find_multi()
 
 import copy
@@ -49,11 +46,13 @@ class cckkCondition:
         self,
         unless_overlap: list[str] = None,
         only_if_overlap: list[str] = None,
-        keep_rect: "cckkShape" = None
+        keep_rect: "cckkShape" = None,
+        keep_within_assoc: bool = False
     ):
         self._unless_overlap = unless_overlap
         self._only_if_overlap = only_if_overlap
         self._keep_rect = keep_rect
+        self._keep_within_assoc = keep_within_assoc
 
     @property
     def unless_overlap(self) -> list[str]:
@@ -66,7 +65,15 @@ class cckkCondition:
     @property
     def keep_rect(self) -> "cckkShape":
         return self._keep_rect
+    
+    @keep_rect.setter
+    def keep_rect(self, value: "cckkShape"):
+        self._keep_rect = value
 
+    @property
+    def keep_within_assoc(self) -> bool:
+        return self._keep_within_assoc
+    
 
 class cckkShape:
     _next_id = 1
@@ -365,15 +372,13 @@ class cckkShape:
 
         return dealt_with
 
-    def move_to(self, xpos: int | tuple[int, int], ypos: int = None,
-                keep_rect: "cckkShape" = None, keep_within: bool = False, condition: cckkCondition = None):
+    def move_to(self, xpos: int | tuple[int, int], ypos: int = None, condition: cckkCondition = None):
         """Move the shape to the specified position
 
         Args:
         xpos: New x-position. if a tuple with the format (x,y), use this as the position
         ypos: New y-position
-        keep_rect: cckkShape object. If specified, keeps the image fully within the keep_rect area
-        keep_within: If True, keeps the shape fully within the MER of the associated shapes
+        condition: cckkCondition object specifying conditions for the move
 
         Returns:
         cckkShape object
@@ -399,19 +404,18 @@ class cckkShape:
                 if self.overlap_multi_count(shapes) == 0:
                     self.undo()
 
+        if condition is not None and (condition.keep_rect is not None or condition.keep_within_assoc):
+            self.keep_within(condition.keep_rect, condition.keep_within_assoc)
 
-        self.keep_within(keep_rect, keep_within)
         return self
 
-    def move(self, dx: int | tuple[int, int], dy: int = None,
-             keep_rect: "cckkShape" = None, keep_within: bool = False, condition: cckkCondition = None):
+    def move(self, dx: int | tuple[int, int], dy: int = None, condition: cckkCondition = None):
         """Move the shape
 
         Args:
         dx: Change in x-position. if a tuple with the format (ddx,dy), use this as the position delta
         dy: Change in y-position
-        keep_rect: cckkShape object. If specified, keeps the image fully within the keep_rect area
-        keep_within: If True, keeps the shape fully within the MER of the associated shapes
+        condition: cckkCondition object specifying conditions for the move
 
         Returns:
         cckkShape object
@@ -422,11 +426,10 @@ class cckkShape:
         xpos = self.xpos + (dx if dx is not None else 0)
         ypos = self.ypos + (dy if dy is not None else 0)
 
-        self.move_to(xpos, ypos, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
+        self.move_to(xpos, ypos, condition=condition)
         return self
 
-    def move_to_assoc(self, xpos: int | tuple[int, int], ypos: int = None,
-                      keep_rect: "cckkShape" = None, keep_within: bool = False, condition: cckkCondition = None,
+    def move_to_assoc(self, xpos: int | tuple[int, int], ypos: int = None, condition: cckkCondition = None,
                       assoc_id: int = None, assoc_name: str = None):
         """Move the associated shape to the specified position
 
@@ -436,12 +439,11 @@ class cckkShape:
         assoc_shape = self.add_assoc_action(assoc_id=assoc_id, assoc_name=assoc_name)
 
         if assoc_shape is not None:
-            assoc_shape.move_to(xpos, ypos, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
+            assoc_shape.move_to(xpos, ypos, condition=condition)
 
         return assoc_shape
 
-    def move_assoc(self, dx: int | tuple[int, int], dy: int = None,
-                   keep_rect: "cckkShape" = None, keep_within: bool = False, condition: cckkCondition = None,
+    def move_assoc(self, dx: int | tuple[int, int], dy: int = None, condition: cckkCondition = None,
                    assoc_id: int = None, assoc_name: str = None):
         """Move the associated shape
 
@@ -451,44 +453,48 @@ class cckkShape:
         assoc_shape = self.add_assoc_action(assoc_id=assoc_id, assoc_name=assoc_name)
 
         if assoc_shape is not None:
-            assoc_shape.move(dx, dy,
-                             keep_rect = self._mer_rect if (keep_rect is None and keep_within) else keep_rect,
-                             condition=condition)
+            if condition is None:
+                cond2 = cckkCondition()
+            else:
+                cond2 = copy.copy(condition)
+
+            if cond2.keep_rect is None:
+                cond2.keep_rect = self._mer_rect
+
+            assoc_shape.move(dx, dy, condition=cond2)
 
         return assoc_shape
 
-    def align(self, align_rect: "cckkShape", horiz: str = "C", vert: str = "C",
-              keep_rect: "cckkShape" = None, keep_within: bool = False):
+    def align(self, align_rect: "cckkShape", horiz: str = "C", vert: str = "C", condition: cckkCondition = None):
         """Align the shape relative to another shape
         
         Args:
         align_rect: cckkShape object representing the shape to align to
         horiz: Shape horizontal alignment relative to selected shape.  Contains "L", "C" or "R" (left, centre, right)
         vert: Shape vertical alignment relative to selected shape. Contains "T", "C" or "B" (top, centre, bottom)
-        keep_rect: cckkShape object representing the shape to keep this shape within
-        keep_within: If True, keeps the shape fully within the MER of the associated shapes
+        condition: cckkCondition object specifying conditions for the move
 
         Returns:
         cckkShape object
         """
+        new_xpos = self.xpos
+        new_ypos = self.ypos
+
         if horiz.upper() == "L":
-            self.xpos = align_rect.xpos
+            new_xpos = align_rect.xpos
         elif horiz.upper() == "R":
-            self.xpos = align_rect.xpos + align_rect.xcols - self.xcols
+            new_xpos = align_rect.xpos + align_rect.xcols - self.xcols
         elif horiz.upper() == "C":
-            self.xpos = align_rect.xpos + \
-                int((align_rect.xcols - self.xcols) / 2)
+            new_xpos = align_rect.xpos + int((align_rect.xcols - self.xcols) / 2)
 
         if vert.upper() == "T":
-            self.ypos = align_rect.ypos
+            new_ypos = align_rect.ypos
         elif vert.upper() == "B":
-            self.ypos = align_rect.ypos + align_rect.yrows - self.yrows
+            new_ypos = align_rect.ypos + align_rect.yrows - self.yrows
         elif vert.upper() == "C":
-            self.ypos = align_rect.ypos + \
-                int((align_rect.yrows - self.yrows) / 2)
+            new_ypos = align_rect.ypos + int((align_rect.yrows - self.yrows) / 2)
 
-        if keep_rect is not None:
-            self.keep_within(keep_rect, keep_within)
+        self.move_to(xpos=new_xpos, ypos=new_ypos, condition=condition)
 
         return self
 
@@ -651,7 +657,7 @@ class cckkViewer(cckkShape):
         Exception: If no images in viewer or invalid image index specified
         """
         self.align(
-            self.find_image(img_name), horiz, vert, self.find_image(keep_img_name)
+            self.find_image(img_name), horiz, vert, cckkCondition(keep_rect=self.find_image(keep_img_name)) 
         )
 
         return self
@@ -692,30 +698,29 @@ class cckkViewer(cckkShape):
         """View of the image through the viewer as a one-dimensional array of colour elements, ready to be sent to the SenseHat"""
         return self.view().pixels
 
-    def move_to(self, xpos: int | tuple[int, int], ypos: int = None,
-                keep_rect: cckkShape = None, keep_within: bool = False, condition: cckkCondition = None):
+    def move_to(self, xpos: int | tuple[int, int], ypos: int = None, condition: cckkCondition = None):
         """Move the viewer to the specified position
 
         Args:
         xpos: New x-position
         ypos: New y-position
-        keep_within: If True, keeps the cammera over the MER of the images
+        condition: cckkCondition object specifying conditions for the move
 
         Returns: self
         """
-        return super().move_to(xpos, ypos, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
+        return super().move_to(xpos=xpos, ypos=ypos, condition=condition)
 
-    def move(self, dx, dy=None, keep_rect: cckkShape = None, keep_within: bool = False, condition: cckkCondition = None):
+    def move(self, dx, dy=None, condition: cckkCondition = None):
         """Move the viewer
 
         Args:
         dx: Change in x-position
         dy: Change in y-position
-        keep: If True, keeps the cammera over the MER of the images
+        condition: cckkCondition object specifying conditions for the move
 
         Returns: self
         """
-        super().move(dx, dy, keep_rect=keep_rect, keep_within=keep_within, condition=condition)
+        super().move(dx, dy, condition=condition)
 
     def find_image(self, name: str) -> "cckkImage":
         return cckkShape.find(name=name)
@@ -740,16 +745,12 @@ class cckkViewer(cckkShape):
         self._update_assoc(name=name, attribute="visible", value=True)
         return self
 
-    def move_to_img(self, name, xpos, ypos=None,
-                    keep_rect: cckkShape = None, keep_within: bool = False, condition: cckkCondition = None):
-        self.move_to_assoc(xpos=xpos, ypos=ypos,
-                           keep_rect=keep_rect, keep_within=keep_within, condition=condition, assoc_name=name)
+    def move_to_img(self, name, xpos, ypos=None, condition: cckkCondition = None):
+        self.move_to_assoc(xpos=xpos, ypos=ypos, condition=condition, assoc_name=name)
         return self
 
-    def move_img(self, name: str, dx: int | tuple[int, int], dy: int = None,
-                 keep_rect: cckkShape = None, keep_within: bool = False, condition: cckkCondition = None):
-        self.move_assoc(dx=dx, dy=dy, keep_rect=keep_rect,
-                        keep_within=keep_within, condition=condition, assoc_name=name)
+    def move_img(self, name: str, dx: int | tuple[int, int], dy: int = None, condition: cckkCondition = None):
+        self.move_assoc(dx=dx, dy=dy, condition=condition, assoc_name=name)
         return self
 
     def align_image(self, name, horiz="C", vert="C"):
