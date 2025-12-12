@@ -215,6 +215,19 @@ rgbcymxw"""
         viewer2.align(img_b, "C", "C", condition=cond)
         self.assertEqual(viewer2.pos, (0,12))
 
+    def test_cckkViewer_find_multi(self):
+        img_red = cckkImage(imgStr="r", name="find_red")
+        img_green = cckkImage(imgStr="ygg", name="find_green")
+        img_blue = cckkImage(imgStr="bbb", name="find_blue")
+        img_magenta = cckkImage(imgStr="mmm", name="find_magenta")
+        viewer = cckkViewer(images=[img_red, img_green, img_blue, img_magenta], xcols=8, yrows=8)
+        imgs = viewer.find_multi(name_list=["find_red", "find_blue", "find_pink"])
+        img_names = [img.name for img in imgs]
+        self.assertEqual(len(imgs), 2)
+        self.assertIn("find_red", img_names)
+        self.assertNotIn("find_green", img_names)
+        self.assertIn("find_blue", img_names)
+
 
 if __name__ == "__main__":
     unittest.main()

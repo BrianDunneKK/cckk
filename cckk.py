@@ -1,5 +1,5 @@
 ### To Do
-# - Replace find_images() with find_multi()
+# - Nothing
 
 import copy
 import time
@@ -725,15 +725,6 @@ class cckkViewer(cckkShape):
     def find_image(self, name: str) -> "cckkImage":
         return cckkShape.find(name=name)
 
-    def find_images(self, name_list):
-        img_list = []
-        if name_list is not None:
-            for name in name_list:         
-                img = self.find_image(name)
-                if img is not None:
-                    img_list.append(img)
-        return img_list
-
     def _find_below(self, name):
         return self.get_assoc_names(below_name=name)
 
@@ -831,7 +822,7 @@ class cckkViewer(cckkShape):
 
         if other_names is None:
             other_names = self._find_below(name)
-        other_imgs = self.find_images(other_names)
+        other_imgs = self.find_multi(name_list=other_names)
         return img.overlap_multi(other_imgs)
 
     def overlap_multi_count_img(self, name, other_names = None):
@@ -850,7 +841,7 @@ class cckkViewer(cckkShape):
 
         if other_names is None:
             other_names = self._find_below(name)
-        other_imgs = self.find_images(other_names)
+        other_imgs = self.find_multi(name_list=other_names)
         return img.overlap_multi_count(other_imgs)
 
     def overlap_with(self, name, other_names = None):
@@ -869,7 +860,7 @@ class cckkViewer(cckkShape):
 
         if other_names is None:
             other_names = self._find_below(name)
-        other_imgs = self.find_images(other_names)
+        other_imgs = self.find_multi(name_list=other_names)
 
         found = None
         for i, other_img in enumerate(other_imgs):
@@ -1680,7 +1671,6 @@ class cckkSenseHatEmu:
 
     def set_rotation(self, rotation:int):
         pass
-
 
 
 if __name__ == '__main__':
