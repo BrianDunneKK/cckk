@@ -4,6 +4,7 @@ from sys import path
 path.append('.')
 from os import listdir
 import cckkCV
+import cckkCamera
 import numpy as np
 from logzero import logger
 
@@ -11,8 +12,11 @@ logger.info(f"Starting {__file__}")
 logger.info(f"  cv2 version: {cv2.__version__}")
 logger.info(f"  numpy version: {np.__version__}")
 logger.info(f"  cckkCV version: {cckkCV.__version__}")
+logger.info(f"  cckkCamera version: {cckkCamera.__version__}")
 
 config = {
+    "num_camera_images": 5,  # Number of images to capture from camera (if camera is available)
+    "camera_image_delay_secs": 15,  # Delay in seconds between camera captures
     "output_file_path": "result.txt",
     "image_path": "local_only/Earth1/",
     "angle_range": 5,  #5  # degrees ... 5 or None for no angle filtering
@@ -20,14 +24,23 @@ config = {
 }
 logger.info(f"  Angle range: {config['angle_range']} degrees")
 
-image_files = listdir(config['image_path'])
-image_files.sort()
-# image_files = image_files[6:8]  # Limit number of images for testing
+image_files = []
+num_images = config['num_camera_images']
+if not cckkCamera.cckkCameraORB.available():
+    image_files = listdir(config['image_path'])
+    image_files.sort()
+    # image_files = image_files[6:8]  # Limit number of images for testing
+    num_images = len(image_files)
+    logger.info(f"Loading {num_images} image files from \"{config['image_path']}\"")
+else:
+    logger.info(f"Taking {num_images} photos using  camera")
 
-logger.info(f"Loading {len(image_files)} image files from \"{config['image_path']}\"")
 img_orbs = []
-for i in range(len(image_files)):
-    img = cckkCV.cckkORB(img_filename = image_files[i], img_path = config['image_path'], auto_detect=True)
+for i in range(num_images):
+    if cckkCamera.cckkCameraORB.available():
+        img = cckkCamera.cckkCameraORB(auto_detect=True)
+    else:
+        img = cckkCV.cckkORB(img_filename = image_files[i], img_path = config['image_path'], auto_detect=True)
 
     # img = cckkCV.cckkORB(img_filename = image_files[i], img_path = config['image_path'], auto_detect=False)
     # img.sobel()
