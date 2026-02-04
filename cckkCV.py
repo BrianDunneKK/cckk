@@ -1,10 +1,10 @@
-import cv2
+import cv2                  ## pip install opencv-python
 from exif import Image
 from datetime import datetime
 import math
 import numpy as np
 import numpy.ma as ma
-from logzero import logger
+from logzero import logger  ## pip install logzero
 from os.path import join
 
 __version__ = "1.0.0"
@@ -29,6 +29,12 @@ __version__ = "1.0.0"
 class cckkORB:
     _orb = cv2.ORB_create(nfeatures = 1000)
     imread_flags = cv2.IMREAD_GRAYSCALE
+
+    def read_colour():
+        cckkORB.imread_flags = cv2.IMREAD_COLOR
+        
+    def read_grayscale():
+        cckkORB.imread_flags = cv2.IMREAD_GRAYSCALE
 
     def __init__(self, img_filename: str, img_path: str, auto_detect: bool = True):
         """Contructs a cckkORB object

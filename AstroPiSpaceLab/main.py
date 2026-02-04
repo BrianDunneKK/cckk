@@ -14,9 +14,9 @@ logger.info(f"  cckkCV version: {cckkCV.__version__}")
 
 config = {
     "output_file_path": "result.txt",
-    "image_path": "local_only/WebExamples/",
-    "angle_range": None,  #5  # degrees
-    "outlier_percentiles": None,  #(10,90)  # tuple or None
+    "image_path": "local_only/Earth1/",
+    "angle_range": 5,  #5  # degrees ... 5 or None for no angle filtering
+    "outlier_percentiles": (10,90),  # tuple ... (10,90) or None for no outlier filtering
 }
 logger.info(f"  Angle range: {config['angle_range']} degrees")
 
