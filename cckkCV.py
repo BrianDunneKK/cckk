@@ -300,13 +300,15 @@ class cckkCalculateSpeed:
 
     def add_analysis(self, analysis: cckkMatchAnalysis, min_inc_matches: int = 30):
         ret_str = None
+        if min_inc_matches is None:
+            min_inc_matches = 30
         if (analysis.num_inc_matches >= min_inc_matches):
             self.analysis_list.append(analysis)
         else:
             ret_str = f"Analysis skipped due to insufficient included matches: {analysis.num_inc_matches}"
         return ret_str
 
-    def result(self) -> float:
+    def result(self, outlier_percentiles: tuple[int,int] = (10,90)) -> float:
         """Calculates weighted average speed from all analyses"""
 
         speeds = []
@@ -317,6 +319,27 @@ class cckkCalculateSpeed:
             inc_matches.append(a.num_inc_matches)
             time_diffs.append(a.time_difference_secs)
 
+        if len(speeds) == 0:
+            return 0, {
+                "inc_analyses": 0,
+                "total_matches": 0,
+                "avg_time_diff_secs": 0,
+                "speeds_excluded": 0,
+                "speed_limits": (0,0)
+            }
+        
+        speeds_excluded = 0
+        lower_limit = 0
+        upper_limit = 0
+        if outlier_percentiles is not None and len(outlier_percentiles) == 2:
+            lower_limit = np.percentile(speeds, outlier_percentiles[0])
+            upper_limit = np.percentile(speeds, outlier_percentiles[1])
+
+            for i in range(len(speeds)):
+                if speeds[i] < lower_limit or speeds[i] > upper_limit:
+                    inc_matches[i] = 0  # Exclude from weighted average calculation
+                    speeds_excluded += 1
+
         wt_avg_speed = np.average(speeds, weights=inc_matches) if len(speeds) > 0 else 0
         avg_time_diff_secs = np.mean(time_diffs) if len(time_diffs) > 0 else 0
 
@@ -325,6 +348,8 @@ class cckkCalculateSpeed:
             {
                 "inc_analyses": len(speeds),
                  "total_matches": len(self.analysis_list),
-                 "avg_time_diff_secs": avg_time_diff_secs
+                 "avg_time_diff_secs": avg_time_diff_secs,
+                 "speeds_excluded": speeds_excluded,
+                 "speed_limits": (lower_limit, upper_limit)
             }
         )
