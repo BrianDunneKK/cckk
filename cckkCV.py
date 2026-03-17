@@ -51,7 +51,8 @@ class cckkORB:
         """
         self._img_filename = img_filename
         self._img_path = join(img_path, self._img_filename)
-        self._img = cv2.imread(self._img_path, cckkORB.imread_flags)
+        self._imread_flags = cckkORB.imread_flags
+        self._img = cv2.imread(self._img_path, self._imread_flags)
         self._img_orig = self._img.copy()
         self._img_edited = None
         self._keypoints = None
@@ -107,6 +108,80 @@ class cckkORB:
         cv2.imshow("imgwindow", img)
         cv2.waitKey(wait_time_ms)
         cv2.destroyWindow("imgwindow")
+
+    def identify_shape(self) -> str:
+        gray = cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        # Using adaptive thresholding for better edge detection
+        thresh = cv2.threshold(blur, 127, 255, cv2.THRESH_BINARY_INV)[1]
+        
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        if not contours:
+            logger.info("No shapes found in the image.")
+            return "None"
+
+        # 2. Focus on the largest object
+        largest_cnt = max(contours, key=cv2.contourArea)
+        area = cv2.contourArea(largest_cnt)
+        perimeter = cv2.arcLength(largest_cnt, True)
+        
+        # 3. Gather mathematical markers
+        approx = cv2.approxPolyDP(largest_cnt, 0.02 * perimeter, True)
+        hull = cv2.convexHull(largest_cnt, returnPoints=False)
+        defects = cv2.convexityDefects(largest_cnt, hull)
+        
+        shape_label = "Unknown"
+
+        # --- DECISION TREE ---
+
+        # A. Check for X-Shape (Look for 4 deep "valleys")
+        defect_count = 0
+        if defects is not None:
+            for i in range(defects.shape[0]):
+                s, e, f, d = defects[i, 0]
+                if d > 1000: # Depth threshold
+                    defect_count += 1
+        
+        if defect_count >= 4:
+            shape_label = "X"
+
+        # B. Check for Rectangle (4 corners)
+        elif len(approx) == 4:
+            shape_label = "Rectangle"
+
+        # C. Distinguish Circle vs Ellipse (Axis Ratio)
+        elif len(largest_cnt) >= 5:
+            # Fit an ellipse to get the axes lengths
+            _, (width, height), _ = cv2.fitEllipse(largest_cnt)
+            
+            # Calculate ratio of Major Axis to Minor Axis
+            ratio = max(width, height) / min(width, height)
+            
+            # If the sides are nearly equal, it's a circle
+            if 0.9 <= ratio <= 1.15:
+                shape_label = "Circle"
+            else:
+                shape_label = "Ellipse"
+
+        # 4. Visualize Results
+        # cv2.drawContours(img, [largest_cnt], -1, (0, 255, 0), 3)
+        
+        # Get center for labeling
+        # M = cv2.moments(largest_cnt)
+        # if M["m00"] != 0:
+        #     cX = int(M["m10"] / M["m00"])
+        #     cY = int(M["m01"] / M["m00"])
+        #     cv2.putText(self._img, shape_label, (cX - 40, cY), 
+        #                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+
+        # cv2.imshow("Result", self._img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+        logger.info(f"Identified shape: {shape_label} (Area: {area:.2f}, Perimeter: {perimeter:.2f}, Defects: {defect_count})")
+        return shape_label
+
 
     @property
     def info(self) -> dict[str, any]:
