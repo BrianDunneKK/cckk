@@ -3,6 +3,7 @@ from sys import path
 
 path.append('.')
 from os import listdir
+import cckk
 import cckkCV
 import cckkCamera
 import numpy as np
@@ -43,7 +44,7 @@ for i in range(num_images):
     if cckkCamera.cckkCameraORB.available():
         img = cckkCamera.cckkCameraORB(auto_detect=True)
     else:
-        img = cckkCV.cckkORB(img_filename = image_files[i], img_path = config['image_path'], auto_detect=True)
+        img = cckkCV.cckkCV2ORB(img_filename = image_files[i], img_path = config['image_path'], auto_detect=True)
 
     # img = cckkCV.cckkORB(img_filename = image_files[i], img_path = config['image_path'], auto_detect=False)
     # img.sobel()

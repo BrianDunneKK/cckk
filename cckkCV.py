@@ -26,74 +26,66 @@ __version__ = "1.0.0"
 # shifting longitudinal path with every 90-minute orbit, moving roughly 2200 km to
 # the west relative to the ground with each revolution.
 
-class cckkORB:
-    _orb = cv2.ORB_create(nfeatures = 1000)
+class cckkCV2Image:
     imread_flags = cv2.IMREAD_GRAYSCALE
 
     def read_colour():
-        cckkORB.imread_flags = cv2.IMREAD_COLOR
+        cckkCV2Image.imread_flags = cv2.IMREAD_COLOR
         
     def read_grayscale():
-        cckkORB.imread_flags = cv2.IMREAD_GRAYSCALE
+        cckkCV2Image.imread_flags = cv2.IMREAD_GRAYSCALE
 
-    def __init__(self, img_filename: str, img_path: str, auto_detect: bool = True):
-        """Contructs a cckkORB object
 
+    def get_colour_name(hsv_colour):
+        """Lookup array for colour ranges."""
+        h, s, v = hsv_colour
+        if v < 40: return "Black"
+        if s < 40: return "White" if v > 200 else "Gray"
+
+        # (Lower_Hue, Upper_Hue, Colour_Name)
+        colour_ranges = [
+            (0, 10, "Red"), (11, 25, "Orange"), (26, 35, "Yellow"),
+            (36, 85, "Green"), (86, 130, "Blue"), (131, 155, "Violet"),
+            (156, 170, "Pink"), (171, 180, "Red")
+        ]
+
+        for lower, upper, name in colour_ranges:
+            if lower <= h <= upper:
+                return name
+        return "Unknown"
+
+
+    def __init__(self, img_filename: str, img_path: str):
+        """Contructs a cckkCV2Image object
         Args:
-        img_path: Path to the image file
-        auto_detect: If True, automatically detects keypoints and descriptors
-
-        Returns:
-        cckkORB  object
-
-        Raises:
-        Exception: Never
+            img_filename: Filename of the image file
+            img_path: Path to the image file
+        Returns:    cckkCV2Image object
+        Raises:     Exception: Never
         """
         self._img_filename = img_filename
         self._img_path = join(img_path, self._img_filename)
-        self._imread_flags = cckkORB.imread_flags
+        self._imread_flags = cckkCV2Image.imread_flags
         self._img = cv2.imread(self._img_path, self._imread_flags)
         self._img_orig = self._img.copy()
         self._img_edited = None
-        self._keypoints = None
-        self._descriptors = None
-        if auto_detect:
-            self.detectAndCompute()
-
-    @property
-    def descriptors(self):
-        """ORB descriptors"""
-        return self._descriptors
-    
-    @property
-    def keypoints(self):
-        """ORB keypoints"""
-        return self._keypoints
 
     @property
     def img(self):
         """Image"""
         return self._img
 
-    def detectAndCompute(self):
-        self._keypoints, self._descriptors = cckkORB._orb.detectAndCompute(self._img, None)
-
+    @property
+    def filename(self):
+        """Image filename"""
+        return self._img_filename
+    
     def get_exif_time(self) -> datetime:
         with open(self._img_path, 'rb') as image_file:
             img = Image(image_file)
             time_str = img.get("datetime_original")
             time = datetime.strptime(time_str, '%Y:%m:%d %H:%M:%S')
             return time
-
-    def sobel(self):
-        sobelx = cv2.Sobel(self._img, cv2.CV_64F, 1, 0, ksize=3)
-        sobely = cv2.Sobel(self._img, cv2.CV_64F, 0, 1, ksize=3)
-        sobel_img = cv2.magnitude(sobelx, sobely)
-        sobel_img = cv2.convertScaleAbs(sobel_img)
-        self._img_edited = sobel_img
-        # sobel = cv2.resize(sobel_img, (1000,600), interpolation = cv2.INTER_AREA)
-        # self.show_image(sobel)
-        return sobel_img
 
     def copy_edited_to_img(self):
         if self._img_edited is not None:
@@ -109,20 +101,49 @@ class cckkORB:
         cv2.waitKey(wait_time_ms)
         cv2.destroyWindow("imgwindow")
 
-    def identify_shape(self) -> str:
-        gray = cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY)
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+class cckkCV2Detect (cckkCV2Image):
+    def __init__(self, img_filename: str, img_path: str):
+        """Contructs a cckkCV2Detect object
+
+        Args:
+        img_filename: Filename of the image file
+        img_path: Path to the image file
+
+        Returns:
+        cckkCV2Detect  object
+
+        Raises:
+        Exception: Never
+        """
+        super().__init__(img_filename, img_path)
+        self._img_gray = cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY)
+        self._countours = None
+
+    @property
+    def contours(self):
+        """Contours detected in the image"""
+        if self._countours is None:
+            self._countours = self.detect_contours()
+        return self._countours
+
+    def detect_contours(self):
+        blur = cv2.GaussianBlur(self._img_gray, (5, 5), 0)
         # Using adaptive thresholding for better edge detection
-        thresh = cv2.threshold(blur, 127, 255, cv2.THRESH_BINARY_INV)[1]
+        # Changed 127 to 192 for better detection of bright objects on white background
+        thresh = cv2.threshold(blur, 192, 255, cv2.THRESH_BINARY_INV)[1]         
         
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        self._countours = contours
+        return self._countours
 
-        if not contours:
+    def identify_shape(self) -> str:
+        if not self.contours:
             logger.info("No shapes found in the image.")
             return "None"
 
         # 2. Focus on the largest object
-        largest_cnt = max(contours, key=cv2.contourArea)
+        largest_cnt = max(self.contours, key=cv2.contourArea)
         area = cv2.contourArea(largest_cnt)
         perimeter = cv2.arcLength(largest_cnt, True)
         
@@ -182,6 +203,70 @@ class cckkORB:
         logger.info(f"Identified shape: {shape_label} (Area: {area:.2f}, Perimeter: {perimeter:.2f}, Defects: {defect_count})")
         return shape_label
 
+    def identify_colour(self) -> str:
+        # Create a mask of the largest contour
+        mask = np.zeros(self._img_gray.shape, np.uint8)
+        cnt = max(self.contours, key=cv2.contourArea)
+    
+        cv2.drawContours(mask, [cnt], -1, 255, -1)
+        
+        # Get pixels belonging only to the object
+        object_pixels = self._img[mask == 255]
+        
+        # Use K-Means on the object's pixels to find the dominant colour
+        pixels = np.float32(object_pixels)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        _, labels, centers = cv2.kmeans(pixels, 1, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+        
+        dominant_bgr = np.uint8(centers[0])
+        hsv_colour = cv2.cvtColor(np.uint8([[dominant_bgr]]), cv2.COLOR_BGR2HSV)[0][0]
+        colour_label = cckkCV2Image.get_colour_name(hsv_colour)
+        return colour_label
+
+class cckkCV2ORB (cckkCV2Image):
+    _orb = cv2.ORB_create(nfeatures = 1000)
+
+    def __init__(self, img_filename: str, img_path: str, auto_detect: bool = True):
+        """Contructs a cckkORB object
+
+        Args:
+        img_path: Path to the image file
+        auto_detect: If True, automatically detects keypoints and descriptors
+
+        Returns:
+        cckkORB  object
+
+        Raises:
+        Exception: Never
+        """
+        super().__init__(img_filename, img_path)
+        self._keypoints = None
+        self._descriptors = None
+        if auto_detect:
+            self.detectAndCompute()
+
+    @property
+    def descriptors(self):
+        """ORB descriptors"""
+        return self._descriptors
+    
+    @property
+    def keypoints(self):
+        """ORB keypoints"""
+        return self._keypoints
+
+    def detectAndCompute(self):
+        self._keypoints, self._descriptors = cckkCV2ORB._orb.detectAndCompute(self.img, None)
+
+    def sobel(self):
+        sobelx = cv2.Sobel(self.img, cv2.CV_64F, 1, 0, ksize=3)
+        sobely = cv2.Sobel(self.img, cv2.CV_64F, 0, 1, ksize=3)
+        sobel_img = cv2.magnitude(sobelx, sobely)
+        sobel_img = cv2.convertScaleAbs(sobel_img)
+        self._img_edited = sobel_img
+        # sobel = cv2.resize(sobel_img, (1000,600), interpolation = cv2.INTER_AREA)
+        # self.show_image(sobel)
+        return sobel_img
 
     @property
     def info(self) -> dict[str, any]:
@@ -202,7 +287,7 @@ class cckkMatcher:
     _GSD = 12648  # Ground Sample Distance in cm/pixel
     _GSD_km_per_pixel = _GSD / 100000  # GSD in km/pixel
 
-    def __init__(self, img1: cckkORB, img2: cckkORB):
+    def __init__(self, img1: cckkCV2ORB, img2: cckkCV2ORB):
         """Constructs a cckkMatch object.
 
         Args:

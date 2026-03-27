@@ -13,7 +13,7 @@ if not cckkCamera_ok:
 
 __version__ = "1.0.0"
 
-class cckkCameraORB(cckkCV.cckkORB):
+class cckkCameraORB(cckkCV.cckkCV2ORB):
     _next_id = 1
     _base_filename = "image"
     _base_path = "./camera"
