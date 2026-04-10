@@ -34,6 +34,8 @@ class cckkCamera():
         if not cckkCamera_ok:
             raise ImportError("cckkCamera: picamzero module not found. Cannot use cckkCamera.")
 
+        self._img_filename = None
+        
         if cckkCamera._camera is None:
             cckkCamera._camera = Camera()
 
