@@ -1,6 +1,6 @@
 cckkCamera_ok = True
 try:
-    from picamzero import Camera
+    from picamzero import Camera # pyright: ignore[reportMissingImports]
 except ImportError:
     cckkCamera_ok = False
 

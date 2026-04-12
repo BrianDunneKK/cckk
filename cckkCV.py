@@ -1,5 +1,6 @@
 import cv2                  ## pip install opencv-python
-from exif import Image
+import piexif
+#from exif import Image
 from datetime import datetime
 import math
 import numpy as np
@@ -81,11 +82,30 @@ class cckkCV2Image:
         return self._img_filename
     
     def get_exif_time(self) -> datetime:
-        with open(self._img_path, 'rb') as image_file:
-            img = Image(image_file)
-            time_str = img.get("datetime_original")
-            time = datetime.strptime(time_str, '%Y:%m:%d %H:%M:%S')
-            return time
+        """Returns a Python datetime object from an image's EXIF data."""
+        try:
+            exif_dict = piexif.load(image_path)
+            # Extract the 'DateTimeOriginal' tag (36867)
+            byte_date = exif_dict.get("Exif", {}).get(piexif.ExifIFD.DateTimeOriginal)
+            
+            if byte_date:
+                # Decode bytes to string
+                str_date = byte_date.decode('utf-8')
+                # Parse the standard EXIF format "YYYY:MM:DD HH:MM:SS" into a datetime object
+                return datetime.strptime(str_date, "%Y:%m:%d %H:%M:%S")
+            
+            return None
+
+        except Exception as e:
+                print(f"Error reading EXIF: {e}")
+                return None
+
+        # with open(self._img_path, 'rb') as image_file:
+        #     img = Image(image_file)
+        #     time_str = img.get("datetime_original")
+        #     time = datetime.strptime(time_str, '%Y:%m:%d %H:%M:%S')
+        #     return time
+
 
     def copy_edited_to_img(self):
         if self._img_edited is not None:
