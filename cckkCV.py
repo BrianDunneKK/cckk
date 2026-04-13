@@ -56,18 +56,22 @@ class cckkCV2Image:
         return "Unknown"
 
 
-    def __init__(self, img_filename: str, img_path: str = None):
+    def __init__(self, img_filename: str, img_path: str = None, use_imread_flags: bool = True):
         """Contructs a cckkCV2Image object
         Args:
             img_filename: Filename of the image file
             img_path: Path to the image file
+            use_imread_flags: Whether to use the imread flags defined in cckkCV2Image.imread_flags (default: True)
         Returns:    cckkCV2Image object
         Raises:     Exception: Never
         """
         self._img_filename = img_filename
         self._img_path = join(img_path, self._img_filename) if img_path is not None else img_filename
-        self._imread_flags = cckkCV2Image.imread_flags
-        self._img = cv2.imread(self._img_path, self._imread_flags)
+        if use_imread_flags:
+            self._imread_flags = cckkCV2Image.imread_flags
+            self._img = cv2.imread(self._img_path, self._imread_flags)
+        else:
+            self._img = cv2.imread(self._img_path)
         self._img_orig = self._img.copy()
         self._img_edited = None
 
@@ -123,7 +127,7 @@ class cckkCV2Image:
 
 
 class cckkCV2Detect (cckkCV2Image):
-    def __init__(self, img_filename: str, img_path: str = None):
+    def __init__(self, img_filename: str, img_path: str = None, use_imread_flags: bool = True):
         """Contructs a cckkCV2Detect object
 
         Args:
@@ -136,7 +140,7 @@ class cckkCV2Detect (cckkCV2Image):
         Raises:
         Exception: Never
         """
-        super().__init__(img_filename, img_path)
+        super().__init__(img_filename, img_path, use_imread_flags)
         self._img_gray = cv2.cvtColor(self._img, cv2.COLOR_BGR2GRAY)
         self._countours = None
 
