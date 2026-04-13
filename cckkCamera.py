@@ -15,7 +15,6 @@ if not cckkCamera_ok:
 __version__ = "1.0.0"
 
 
-
 class cckkCamera():
     _next_id = 1
     _base_filename = "image"
@@ -43,13 +42,17 @@ class cckkCamera():
             self.take_photo()
 
     @property
-    def filename(self) -> str:
+    def img_filename(self) -> str:
         return self._img_filename
+    
+    @property
+    def img_path(self) -> str:
+        return self._img_path
     
     def take_photo(self) -> None:
         self._img_filename = cckkCamera._generate_filename()
-        img_path = join(cckkCamera._base_path, self._img_filename)
-        cckkCamera._camera.take_photo(img_path)
+        self._img_path = join(cckkCamera._base_path, self._img_filename)
+        cckkCamera._camera.take_photo(self._img_path)
 
     def start_preview(self) -> None:
         cckkCamera._camera.start_preview()
