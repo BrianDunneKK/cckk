@@ -56,7 +56,7 @@ class cckkCV2Image:
         return "Unknown"
 
 
-    def __init__(self, img_filename: str, img_path: str):
+    def __init__(self, img_filename: str, img_path: str = None):
         """Contructs a cckkCV2Image object
         Args:
             img_filename: Filename of the image file
@@ -65,7 +65,7 @@ class cckkCV2Image:
         Raises:     Exception: Never
         """
         self._img_filename = img_filename
-        self._img_path = join(img_path, self._img_filename)
+        self._img_path = join(img_path, self._img_filename) if img_path is not None else img_filename
         self._imread_flags = cckkCV2Image.imread_flags
         self._img = cv2.imread(self._img_path, self._imread_flags)
         self._img_orig = self._img.copy()
@@ -123,7 +123,7 @@ class cckkCV2Image:
 
 
 class cckkCV2Detect (cckkCV2Image):
-    def __init__(self, img_filename: str, img_path: str):
+    def __init__(self, img_filename: str, img_path: str = None):
         """Contructs a cckkCV2Detect object
 
         Args:
