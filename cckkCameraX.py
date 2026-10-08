@@ -1,4 +1,4 @@
-#import platform
+# import platform
 import cv2
 
 IS_RASPBERRY_PI = False
@@ -13,6 +13,7 @@ except ImportError:
 
 class cckkCameraX:
     def __init__(self):
+        self._frame_bgr = None
         if IS_RASPBERRY_PI:
             print("Initializing Picamera2 (Raspberry Pi)...")
             self.picam2 = Picamera2()
@@ -21,7 +22,7 @@ class cckkCameraX:
             )
             self.picam2.configure(config)
             self.picam2.start()
-            
+
             # Enable continuous autofocus and auto white balance on Raspberry Pi
             self.picam2.set_controls({
                 "AfMode": 2,  # Continuous Autofocus
@@ -30,6 +31,29 @@ class cckkCameraX:
         else:
             print("Initializing OpenCV VideoCapture (Windows/Webcam)...")
             self.cap = cv2.VideoCapture(0)
+
+    @property
+    def frame_bgr(self) -> any:
+        return self._frame_bgr
+
+    @property
+    def frame_rgb(self) -> any:
+        return cv2.cvtColor(self.frame_bgr, cv2.COLOR_BGR2RGB)
+
+    @property
+    def shape(self) -> any:
+        return self.frame_bgr.shape
+
+    @property
+    def width(self) -> int:
+        h, w, _ = self.shape
+        return w
+
+    @property
+    def height(self) -> int:
+        h, w, _ = self.shape
+        return h
+
 
     def read_frame(self, mirror: bool = True):
         """Returns a BGR frame ready for standard OpenCV rendering/processing."""
@@ -45,6 +69,8 @@ class cckkCameraX:
 
         if (mirror):
             frame_bgr = cv2.flip(frame_bgr, 1)
+
+        self._frame_bgr = frame_bgr
         return frame_bgr
 
     def release(self):
@@ -52,4 +78,3 @@ class cckkCameraX:
             self.picam2.stop()
         else:
             self.cap.release()
-
