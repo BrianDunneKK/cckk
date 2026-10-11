@@ -22,8 +22,11 @@ class cckkEdgeAIResult:
         return self._name
 
     @property
-    def success(self) -> str:
-        return self._labels and len(self._labels) > 0
+    def success(self) -> bool:
+        return len(self._labels) > 0 or len(self._positions) > 0
+
+    def num_labels(self) -> int:
+        return len(self._labels)
 
     def label(self, idx: int = 0) -> str:
         if (idx < 0):
@@ -37,7 +40,12 @@ class cckkEdgeAIResult:
         if idx >= 0 and idx < len(self._scores) and len(self._scores) > 0:
             return self._scores[idx]
         else:
-            return None
+            return 0
+
+    def num_positions(self, idx: int = 0) -> int:
+        if idx >= 0 and idx < len(self._positions) and len(self._positions) > 0:
+            return len(self._positions[idx])
+        return 0
 
     def position(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> any:
         if idx >= 0 and idx < len(self._positions) and len(self._positions) > 0:
@@ -53,9 +61,17 @@ class cckkEdgeAIResult:
                 return pos
         return None
 
+    def pos_xy(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
+        pos = self.position(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
+        return [pos.x, pos.y]
+
     def pos_xyz(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
         pos = self.position(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
         return [pos.x, pos.y, pos.z]
+
+    def polyline(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> np.ndarray:
+        empty_pts = np.empty((0, 1, 2), dtype=np.int32)
+        return empty_pts
 
 class cckkMediaPipeResult(cckkEdgeAIResult):
     def __init__(self, name: str = "Result of MediaPipe AI task"):
@@ -173,6 +189,33 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
         return self.result.success
 
 
+class cckkMPHandLandmarkerResult(cckkMediaPipeResult):
+   def polyline(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> np.ndarray:
+        match sub_idx:
+            case 0:  # Palm
+                pline = np.array([
+                    self.pos_xy(idx=idx, sub_idx=0, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=5, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=9, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=13, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=17, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=0, scale_to=scale_to)],
+                    np.int32)
+            case 1:  # Thumb
+                pline = np.array([
+                    self.pos_xy(idx=idx, sub_idx=0, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=1, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=2, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=3, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=4, scale_to=scale_to)],
+                    np.int32)
+            case _:
+                poly = super().polyline(idx, sub_idx, scale_to)
+
+        pline = pline.reshape((-1,1,2))
+        return pline
+
+
 class cckkMPHandLandmarker(cckkMediaPipeTask):
     def __init__(
         self,
@@ -188,18 +231,21 @@ class cckkMPHandLandmarker(cckkMediaPipeTask):
         )
         self._skill = vision.HandLandmarker.create_from_options(options)
 
+    def create_result(self) -> None:
+        self._result = cckkMPHandLandmarkerResult(self.name + " result")
 
     def run(self, data: any = None) -> bool:
         if data is not None:
             self.set_image(data)
 
         self.create_result()
-        skill_result = self.skill.recognize(self.image)
+        skill_result = self.skill.detect(self.image)
         if skill_result.hand_landmarks:
-            for idx, hand_landmarks in enumerate(skill_result.hand_landmarks):
+            for idx, hand_landmarks in enumerate(skill_result.hand_landmarks):  # Add array of hands
                 if not hand_landmarks:
                     continue
 
-                self._result._positions.append(hand_landmarks)  # Add array of landmarks
+                self._result._positions.append(hand_landmarks)   # Add array of landmarks
 
         return self.result.success
+
