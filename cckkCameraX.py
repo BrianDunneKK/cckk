@@ -55,7 +55,7 @@ class cckkCameraX:
         return h
 
 
-    def read_frame(self, mirror: bool = True):
+    def read_frame(self, mirror: bool = False):
         """Returns a BGR frame ready for standard OpenCV rendering/processing."""
         if IS_RASPBERRY_PI:
             # On Pi, "RGB888" format in Picamera2 returns BGR-ordered array bytes directly
@@ -72,6 +72,21 @@ class cckkCameraX:
 
         self._frame_bgr = frame_bgr
         return frame_bgr
+
+    def mirror(self):
+        self._frame_bgr = cv2.flip(self.frame_bgr, 1)
+
+    def frame(self, mirror: bool = False, bgr: bool = True):
+        if (bgr):
+            if (mirror):
+                return cv2.flip(self.frame_bgr, 1)
+            else:
+                return self.frame_bgr
+        else:
+            if (mirror):
+                return cv2.flip(self.frame_rgb, 1)
+            else:
+                return self.frame_rgb
 
     def release(self):
         if IS_RASPBERRY_PI:

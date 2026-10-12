@@ -13,6 +13,7 @@ from mediapipe.tasks.python import vision
 class cckkEdgeAIResult:
     def __init__(self, name: str = "Result of Edge AI task"):
         self._name = name
+        self.raw_result = None
         self._labels = []
         self._scores = []
         self._positions = []
@@ -42,9 +43,15 @@ class cckkEdgeAIResult:
         else:
             return 0
 
+    def num_objects(self) -> int:
+        return len(self._positions)
+
     def num_positions(self, idx: int = 0) -> int:
         if idx >= 0 and idx < len(self._positions) and len(self._positions) > 0:
             return len(self._positions[idx])
+        return 0
+
+    def num_polylines(self, idx: int = 0) -> int:
         return 0
 
     def position(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> any:
@@ -76,7 +83,14 @@ class cckkEdgeAIResult:
 class cckkMediaPipeResult(cckkEdgeAIResult):
     def __init__(self, name: str = "Result of MediaPipe AI task"):
         super().__init__(name=name)
+        self._sides = []
         self._gestures = []
+
+    def side(self, idx: int = 0) -> str:
+        if idx >= 0 and idx < len(self._sides) and len(self._sides) > 0:
+            return self._sides[idx]
+        else:
+            return ""
 
     def gesture(self, idx: int = 0) -> any:
         if idx >= 0 and idx < len(self._gestures) and len(self._gestures) > 0:
@@ -171,16 +185,16 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
             self.set_image(data)
 
         self.create_result()
-        skill_result = self.skill.recognize(self.image)
-        if skill_result.gestures:
-            for idx, gestures in enumerate(skill_result.gestures):
+        self._result.raw_result = self.skill.recognize(self.image)
+        if self._result.raw_result.gestures:
+            for idx, gestures in enumerate(self._result.raw_result.gestures):
                 if not gestures:
                     continue
                 self._result._labels.append(gestures[0].category_name)
                 self._result._scores.append(gestures[0].score)  # Get confidence score
 
-        if skill_result.hand_landmarks:
-            for idx, hand_landmarks in enumerate(skill_result.hand_landmarks):
+        if self._result.raw_result.hand_landmarks:
+            for idx, hand_landmarks in enumerate(self._result.raw_result.hand_landmarks):
                 if not hand_landmarks:
                     continue
 
@@ -190,7 +204,14 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
 
 
 class cckkMPHandLandmarkerResult(cckkMediaPipeResult):
-   def polyline(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> np.ndarray:
+    def num_polylines(self, idx: int = 0) -> int:
+        if (idx >= 0 and idx < self.num_objects()):
+            return 6
+        else:
+            return 0
+   
+    def polyline(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> np.ndarray:
+        pline = np.empty((0, 1, 2), dtype=np.int32)
         match sub_idx:
             case 0:  # Palm
                 pline = np.array([
@@ -208,6 +229,34 @@ class cckkMPHandLandmarkerResult(cckkMediaPipeResult):
                     self.pos_xy(idx=idx, sub_idx=2, scale_to=scale_to),
                     self.pos_xy(idx=idx, sub_idx=3, scale_to=scale_to),
                     self.pos_xy(idx=idx, sub_idx=4, scale_to=scale_to)],
+                    np.int32)
+            case 2:  # Index
+                pline = np.array([
+                    self.pos_xy(idx=idx, sub_idx=5, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=6, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=7, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=8, scale_to=scale_to)],
+                    np.int32)
+            case 3:  # Middle
+                pline = np.array([
+                    self.pos_xy(idx=idx, sub_idx=9, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=10, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=11, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=12, scale_to=scale_to)],
+                    np.int32)
+            case 4:  # Ring
+                pline = np.array([
+                    self.pos_xy(idx=idx, sub_idx=13, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=14, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=15, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=16, scale_to=scale_to)],
+                    np.int32)
+            case 5:  # Pinky
+                pline = np.array([
+                    self.pos_xy(idx=idx, sub_idx=17, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=18, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=19, scale_to=scale_to),
+                    self.pos_xy(idx=idx, sub_idx=20, scale_to=scale_to)],
                     np.int32)
             case _:
                 poly = super().polyline(idx, sub_idx, scale_to)
@@ -239,13 +288,19 @@ class cckkMPHandLandmarker(cckkMediaPipeTask):
             self.set_image(data)
 
         self.create_result()
-        skill_result = self.skill.detect(self.image)
-        if skill_result.hand_landmarks:
-            for idx, hand_landmarks in enumerate(skill_result.hand_landmarks):  # Add array of hands
+        self._result.raw_result = self.skill.detect(self.image)
+        if self._result.raw_result.hand_landmarks:
+            for idx, hand_landmarks in enumerate(self._result.raw_result.hand_landmarks):  # Add array of hands
                 if not hand_landmarks:
                     continue
-
                 self._result._positions.append(hand_landmarks)   # Add array of landmarks
+
+        if self._result.raw_result.handedness:
+            for idx, handedness in enumerate(self._result.raw_result.handedness):
+                if not handedness:
+                    continue
+                self._result._sides.append(handedness[0].category_name)
 
         return self.result.success
 
+# task.result.raw_result.handedness[0][0].category_name = "Right"
