@@ -10,6 +10,14 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
+from dataclasses import dataclass
+
+@dataclass
+class cckkPosition:
+    x: float
+    y: float
+    z: float
+
 class cckkEdgeAIResult:
     def __init__(self, name: str = "Result of Edge AI task"):
         self._name = name
@@ -54,27 +62,31 @@ class cckkEdgeAIResult:
     def num_polylines(self, idx: int = 0) -> int:
         return 0
 
-    def position(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> any:
+    def position(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> cckkPosition:
         if idx >= 0 and idx < len(self._positions) and len(self._positions) > 0:
             points = self._positions[idx] 
             if sub_idx >= 0 and sub_idx < len(points) and len(points) > 0:
-                pos = points[sub_idx]
+                # Create a new object so that the result is not modified
+                landmark = points[sub_idx]
+                pos = cckkPosition(x=landmark.x, y=landmark.y, z=landmark.z)
                 if len(scale_to) == 2:
                     scale_to.append(1)
                 if (len(scale_to) >= 3):
-                    pos.x = int(pos.x * scale_to[0])
-                    pos.y = int(pos.y * scale_to[1])
-                    pos.z = int(pos.z * scale_to[2])
+                    pos.x = pos.x * scale_to[0]
+                    pos.y = pos.y * scale_to[1]
+                    pos.z = pos.z * scale_to[2]
                 return pos
         return None
 
-    def pos_xy(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
-        pos = self.position(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
-        return [pos.x, pos.y]
-
     def pos_xyz(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
         pos = self.position(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
-        return [pos.x, pos.y, pos.z]
+        if pos is None:
+            return [None, None, None]
+        return [int(pos.x), int(pos.y), int(pos.z)]
+
+    def pos_xy(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
+        pos = self.pos_xyz(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
+        return [pos[0], pos[1]]
 
     def polyline(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> np.ndarray:
         empty_pts = np.empty((0, 1, 2), dtype=np.int32)
@@ -91,6 +103,24 @@ class cckkMediaPipeResult(cckkEdgeAIResult):
             return self._sides[idx]
         else:
             return ""
+
+    def side_idx(self, side: str) -> int:
+        ret_idx = -1  # Not found
+        for i in range(len(self._sides)):
+            if self.side(i) == side:
+                ret_idx = i
+        return ret_idx
+
+    def pos_xyz_side(self, side: str, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
+        idx = self.side_idx(side)
+        pos = self.pos_xyz(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
+        if pos is None:
+            return [None, None, None]
+        return pos
+
+    def pos_xy_side(self, side: str, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
+        pos = self.pos_xyz_side(side=side, sub_idx=sub_idx, scale_to=scale_to)
+        return [pos[0], pos[1]]
 
     def gesture(self, idx: int = 0) -> any:
         if idx >= 0 and idx < len(self._gestures) and len(self._gestures) > 0:
@@ -199,6 +229,13 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
                     continue
 
                 self._result._positions.append(hand_landmarks)  # Add array of landmarks
+
+        if self._result.raw_result.handedness:
+            for idx, handedness in enumerate(self._result.raw_result.handedness):
+                if not handedness:
+                    continue
+                self._result._sides.append(handedness[0].category_name)
+
 
         return self.result.success
 
