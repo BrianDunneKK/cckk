@@ -6,6 +6,7 @@ IS_RASPBERRY_PI = False
 # Try importing Picamera2 (only works on Raspberry Pi)
 try:
     from picamera2 import Picamera2
+
     IS_RASPBERRY_PI = True
 except ImportError:
     IS_RASPBERRY_PI = False
@@ -24,10 +25,12 @@ class cckkCameraX:
             self.picam2.start()
 
             # Enable continuous autofocus and auto white balance on Raspberry Pi
-            self.picam2.set_controls({
-                "AfMode": 2,  # Continuous Autofocus
-                "AwbMode": 0  # Auto White Balance
-            })
+            self.picam2.set_controls(
+                {
+                    "AfMode": 2,  # Continuous Autofocus
+                    "AwbMode": 0,  # Auto White Balance
+                }
+            )
         else:
             print("Initializing OpenCV VideoCapture (Windows/Webcam)...")
             self.cap = cv2.VideoCapture(0)
@@ -54,7 +57,6 @@ class cckkCameraX:
         h, w, _ = self.shape
         return h
 
-
     def read_frame(self, mirror: bool = False):
         """Returns a BGR frame ready for standard OpenCV rendering/processing."""
         if IS_RASPBERRY_PI:
@@ -67,7 +69,7 @@ class cckkCameraX:
             if not ret:
                 return None
 
-        if (mirror):
+        if mirror:
             frame_bgr = cv2.flip(frame_bgr, 1)
 
         self._frame_bgr = frame_bgr
@@ -77,13 +79,13 @@ class cckkCameraX:
         self._frame_bgr = cv2.flip(self.frame_bgr, 1)
 
     def frame(self, mirror: bool = False, bgr: bool = True):
-        if (bgr):
-            if (mirror):
+        if bgr:
+            if mirror:
                 return cv2.flip(self.frame_bgr, 1)
             else:
                 return self.frame_bgr
         else:
-            if (mirror):
+            if mirror:
                 return cv2.flip(self.frame_rgb, 1)
             else:
                 return self.frame_rgb

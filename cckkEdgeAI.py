@@ -12,11 +12,13 @@ from mediapipe.tasks.python import vision
 
 from dataclasses import dataclass
 
+
 @dataclass
 class cckkPosition:
     x: float
     y: float
     z: float
+
 
 class cckkEdgeAIResult:
     def __init__(self, name: str = "Result of Edge AI task"):
@@ -38,7 +40,7 @@ class cckkEdgeAIResult:
         return len(self._labels)
 
     def label(self, idx: int = 0) -> str:
-        if (idx < 0):
+        if idx < 0:
             return ", ".join(self._labels)
         elif idx >= 0 and idx < len(self._labels) and len(self._labels) > 0:
             return self._labels[idx]
@@ -62,35 +64,44 @@ class cckkEdgeAIResult:
     def num_polylines(self, idx: int = 0) -> int:
         return 0
 
-    def position(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> cckkPosition:
+    def position(
+        self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
+    ) -> cckkPosition:
         if idx >= 0 and idx < len(self._positions) and len(self._positions) > 0:
-            points = self._positions[idx] 
+            points = self._positions[idx]
             if sub_idx >= 0 and sub_idx < len(points) and len(points) > 0:
                 # Create a new object so that the result is not modified
                 landmark = points[sub_idx]
                 pos = cckkPosition(x=landmark.x, y=landmark.y, z=landmark.z)
                 if len(scale_to) == 2:
                     scale_to.append(1)
-                if (len(scale_to) >= 3):
+                if len(scale_to) >= 3:
                     pos.x = pos.x * scale_to[0]
                     pos.y = pos.y * scale_to[1]
                     pos.z = pos.z * scale_to[2]
                 return pos
         return None
 
-    def pos_xyz(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
+    def pos_xyz(
+        self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
+    ) -> list[int]:
         pos = self.position(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
         if pos is None:
             return [None, None, None]
         return [int(pos.x), int(pos.y), int(pos.z)]
 
-    def pos_xy(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
+    def pos_xy(
+        self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
+    ) -> list[int]:
         pos = self.pos_xyz(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
         return [pos[0], pos[1]]
 
-    def polyline(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> np.ndarray:
+    def polyline(
+        self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
+    ) -> np.ndarray:
         empty_pts = np.empty((0, 1, 2), dtype=np.int32)
         return empty_pts
+
 
 class cckkMediaPipeResult(cckkEdgeAIResult):
     def __init__(self, name: str = "Result of MediaPipe AI task"):
@@ -111,14 +122,18 @@ class cckkMediaPipeResult(cckkEdgeAIResult):
                 ret_idx = i
         return ret_idx
 
-    def pos_xyz_side(self, side: str, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
+    def pos_xyz_side(
+        self, side: str, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
+    ) -> list[int]:
         idx = self.side_idx(side)
         pos = self.pos_xyz(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
         if pos is None:
             return [None, None, None]
         return pos
 
-    def pos_xy_side(self, side: str, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> list[int]:
+    def pos_xy_side(
+        self, side: str, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
+    ) -> list[int]:
         pos = self.pos_xyz_side(side=side, sub_idx=sub_idx, scale_to=scale_to)
         return [pos[0], pos[1]]
 
@@ -202,9 +217,18 @@ class cckkMediaPipeTask(cckkEdgeAITask):
 
 
 class cckkMPGestureRecognizer(cckkMediaPipeTask):
-    def __init__(self, task_path: str = "", num_hands: int = 1,name: str = "Gesture Recogniser task"):
-        super().__init__(task_path=task_path, task_file="gesture_recognizer.task", name=name)
-        options = vision.GestureRecognizerOptions(base_options=self.base_options, num_hands=num_hands)
+    def __init__(
+        self,
+        task_path: str = "",
+        num_hands: int = 1,
+        name: str = "Gesture Recogniser task",
+    ):
+        super().__init__(
+            task_path=task_path, task_file="gesture_recognizer.task", name=name
+        )
+        options = vision.GestureRecognizerOptions(
+            base_options=self.base_options, num_hands=num_hands
+        )
         self._skill = vision.GestureRecognizer.create_from_options(options)
 
     def run(self, data: any = None) -> bool:
@@ -221,7 +245,9 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
                 self._result._scores.append(gestures[0].score)  # Get confidence score
 
         if self._result.raw_result.hand_landmarks:
-            for idx, hand_landmarks in enumerate(self._result.raw_result.hand_landmarks):
+            for idx, hand_landmarks in enumerate(
+                self._result.raw_result.hand_landmarks
+            ):
                 if not hand_landmarks:
                     continue
 
@@ -238,63 +264,83 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
 
 class cckkMPHandLandmarkerResult(cckkMediaPipeResult):
     def num_polylines(self, idx: int = 0) -> int:
-        if (idx >= 0 and idx < self.num_objects()):
+        if idx >= 0 and idx < self.num_objects():
             return 6
         else:
             return 0
-   
-    def polyline(self, idx: int = 0, sub_idx : int = 0, scale_to : list[int] = [1,1,1]) -> np.ndarray:
+
+    def polyline(
+        self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
+    ) -> np.ndarray:
         pline = np.empty((0, 1, 2), dtype=np.int32)
         match sub_idx:
             case 0:  # Palm
-                pline = np.array([
-                    self.pos_xy(idx=idx, sub_idx=0, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=5, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=9, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=13, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=17, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=0, scale_to=scale_to)],
-                    np.int32)
+                pline = np.array(
+                    [
+                        self.pos_xy(idx=idx, sub_idx=0, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=5, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=9, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=13, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=17, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=0, scale_to=scale_to),
+                    ],
+                    np.int32,
+                )
             case 1:  # Thumb
-                pline = np.array([
-                    self.pos_xy(idx=idx, sub_idx=0, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=1, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=2, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=3, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=4, scale_to=scale_to)],
-                    np.int32)
+                pline = np.array(
+                    [
+                        self.pos_xy(idx=idx, sub_idx=0, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=1, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=2, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=3, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=4, scale_to=scale_to),
+                    ],
+                    np.int32,
+                )
             case 2:  # Index
-                pline = np.array([
-                    self.pos_xy(idx=idx, sub_idx=5, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=6, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=7, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=8, scale_to=scale_to)],
-                    np.int32)
+                pline = np.array(
+                    [
+                        self.pos_xy(idx=idx, sub_idx=5, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=6, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=7, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=8, scale_to=scale_to),
+                    ],
+                    np.int32,
+                )
             case 3:  # Middle
-                pline = np.array([
-                    self.pos_xy(idx=idx, sub_idx=9, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=10, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=11, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=12, scale_to=scale_to)],
-                    np.int32)
+                pline = np.array(
+                    [
+                        self.pos_xy(idx=idx, sub_idx=9, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=10, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=11, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=12, scale_to=scale_to),
+                    ],
+                    np.int32,
+                )
             case 4:  # Ring
-                pline = np.array([
-                    self.pos_xy(idx=idx, sub_idx=13, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=14, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=15, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=16, scale_to=scale_to)],
-                    np.int32)
+                pline = np.array(
+                    [
+                        self.pos_xy(idx=idx, sub_idx=13, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=14, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=15, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=16, scale_to=scale_to),
+                    ],
+                    np.int32,
+                )
             case 5:  # Pinky
-                pline = np.array([
-                    self.pos_xy(idx=idx, sub_idx=17, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=18, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=19, scale_to=scale_to),
-                    self.pos_xy(idx=idx, sub_idx=20, scale_to=scale_to)],
-                    np.int32)
+                pline = np.array(
+                    [
+                        self.pos_xy(idx=idx, sub_idx=17, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=18, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=19, scale_to=scale_to),
+                        self.pos_xy(idx=idx, sub_idx=20, scale_to=scale_to),
+                    ],
+                    np.int32,
+                )
             case _:
                 poly = super().polyline(idx, sub_idx, scale_to)
 
-        pline = pline.reshape((-1,1,2))
+        pline = pline.reshape((-1, 1, 2))
         return pline
 
 
@@ -323,10 +369,12 @@ class cckkMPHandLandmarker(cckkMediaPipeTask):
         self.create_result()
         self._result.raw_result = self.skill.detect(self.image)
         if self._result.raw_result.hand_landmarks:
-            for idx, hand_landmarks in enumerate(self._result.raw_result.hand_landmarks):  # Add array of hands
+            for idx, hand_landmarks in enumerate(
+                self._result.raw_result.hand_landmarks
+            ):  # Add array of hands
                 if not hand_landmarks:
                     continue
-                self._result._positions.append(hand_landmarks)   # Add array of landmarks
+                self._result._positions.append(hand_landmarks)  # Add array of landmarks
 
         if self._result.raw_result.handedness:
             for idx, handedness in enumerate(self._result.raw_result.handedness):
@@ -335,5 +383,6 @@ class cckkMPHandLandmarker(cckkMediaPipeTask):
                 self._result._sides.append(handedness[0].category_name)
 
         return self.result.success
+
 
 # task.result.raw_result.handedness[0][0].category_name = "Right"
