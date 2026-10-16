@@ -152,7 +152,6 @@ class cckkEdgeAITask:
         self._result = cckkEdgeAIResult(self.name + " result")
 
 
-
 class cckkMediaPipeTask(cckkEdgeAITask):
 
     def __init__(
@@ -203,11 +202,9 @@ class cckkMediaPipeTask(cckkEdgeAITask):
 
 
 class cckkMPGestureRecognizer(cckkMediaPipeTask):
-    def __init__(self, task_path: str = "", name: str = "Gesture Recogniser task"):
-        super().__init__(
-            task_path=task_path, task_file="gesture_recognizer.task", name=name
-        )
-        options = vision.GestureRecognizerOptions(base_options=self.base_options)
+    def __init__(self, task_path: str = "", num_hands: int = 1,name: str = "Gesture Recogniser task"):
+        super().__init__(task_path=task_path, task_file="gesture_recognizer.task", name=name)
+        options = vision.GestureRecognizerOptions(base_options=self.base_options, num_hands=num_hands)
         self._skill = vision.GestureRecognizer.create_from_options(options)
 
     def run(self, data: any = None) -> bool:
@@ -235,7 +232,6 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
                 if not handedness:
                     continue
                 self._result._sides.append(handedness[0].category_name)
-
 
         return self.result.success
 
