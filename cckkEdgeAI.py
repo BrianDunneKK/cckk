@@ -3,7 +3,9 @@ import os
 os.environ["GLOG_minloglevel"] = "2"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
+from typing import Any
 import string
+from collections import deque
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -21,12 +23,12 @@ class cckkPosition:
 
 
 class cckkEdgeAIResult:
-    def __init__(self, name: str = "Result of Edge AI task"):
+    def __init__(self, hx_max_len : int = 1, name: str = "Result of Edge AI task"):
         self._name = name
+        self._hx_man_len = hx_max_len
+        self._hx_positions = deque(maxlen = self._hx_man_len)
         self.raw_result = None
-        self._labels = []
-        self._scores = []
-        self._positions = []
+        self.clear()
 
     @property
     def name(self) -> str:
@@ -35,6 +37,11 @@ class cckkEdgeAIResult:
     @property
     def success(self) -> bool:
         return len(self._labels) > 0 or len(self._positions) > 0
+
+    def clear(self) -> None:
+        self._labels = []
+        self._scores = []
+        self._positions = []
 
     def num_labels(self) -> int:
         return len(self._labels)
@@ -53,6 +60,9 @@ class cckkEdgeAIResult:
         else:
             return 0
 
+    def num_hx_positions(self) -> int:
+        return len(self._hx_positions)
+
     def num_objects(self) -> int:
         return len(self._positions)
 
@@ -64,9 +74,13 @@ class cckkEdgeAIResult:
     def num_polylines(self, idx: int = 0) -> int:
         return 0
 
+    def append_positions(self, positions) -> None:
+        self._positions.append(positions)
+        self._hx_positions.append(positions)
+
     def position(
         self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
-    ) -> cckkPosition:
+    ) -> cckkPosition|None:
         if idx >= 0 and idx < len(self._positions) and len(self._positions) > 0:
             points = self._positions[idx]
             if sub_idx >= 0 and sub_idx < len(points) and len(points) > 0:
@@ -84,7 +98,7 @@ class cckkEdgeAIResult:
 
     def pos_xyz(
         self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
-    ) -> list[int]:
+    ) -> list[int]|list[None]:
         pos = self.position(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
         if pos is None:
             return [None, None, None]
@@ -92,7 +106,7 @@ class cckkEdgeAIResult:
 
     def pos_xy(
         self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
-    ) -> list[int]:
+    ) -> list[int]|list[None]:
         pos = self.pos_xyz(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
         return [pos[0], pos[1]]
 
@@ -102,10 +116,23 @@ class cckkEdgeAIResult:
         empty_pts = np.empty((0, 1, 2), dtype=np.int32)
         return empty_pts
 
+    def hx_position(
+        self, hx_idx, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
+    ) -> cckkPosition|None:
+        if hx_idx >= 0 and hx_idx < self.num_hx_positions():
+            pass
+
+        return None
+
+
 
 class cckkMediaPipeResult(cckkEdgeAIResult):
     def __init__(self, name: str = "Result of MediaPipe AI task"):
         super().__init__(name=name)
+        self.clear()
+
+    def clear(self) -> None:
+        super().clear()
         self._sides = []
         self._gestures = []
 
@@ -158,13 +185,16 @@ class cckkEdgeAITask:
     def result(self) -> cckkEdgeAIResult:
         return self._result
 
-    def run(self) -> bool:
+    def run(self, data: Any = None) -> bool:
         """Run the Edge AI task and return success flag"""
-        self.create_result()
+        self.clear_result()
         return True
 
     def create_result(self) -> None:
         self._result = cckkEdgeAIResult(self.name + " result")
+
+    def clear_result(self) -> None:
+        self._result.clear()
 
 
 class cckkMediaPipeTask(cckkEdgeAITask):
@@ -183,7 +213,6 @@ class cckkMediaPipeTask(cckkEdgeAITask):
             )
         self._image = None
         self._skill = None
-        self.create_result()
 
     @property
     def base_options(self) -> any:
@@ -201,11 +230,11 @@ class cckkMediaPipeTask(cckkEdgeAITask):
     def result(self) -> cckkMediaPipeResult:
         return self._result
 
-    def set_image(self, image: any, image_format: any = mp.ImageFormat.SRGB):
+    def set_image(self, image: Any, image_format: Any = mp.ImageFormat.SRGB):
         self._image = mp.Image(image_format=image_format, data=image)
 
-    def run(self, data: any = None) -> bool:
-        self.create_result()
+    def run(self, data: Any = None) -> bool:
+        self.clear_result()
         return True
 
     def create_result(self) -> None:
@@ -231,11 +260,11 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
         )
         self._skill = vision.GestureRecognizer.create_from_options(options)
 
-    def run(self, data: any = None) -> bool:
+    def run(self, data: Any = None) -> bool:
         if data is not None:
             self.set_image(data)
 
-        self.create_result()
+        self.clear_result()
         self._result.raw_result = self.skill.recognize(self.image)
         if self._result.raw_result.gestures:
             for idx, gestures in enumerate(self._result.raw_result.gestures):
@@ -251,7 +280,7 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
                 if not hand_landmarks:
                     continue
 
-                self._result._positions.append(hand_landmarks)  # Add array of landmarks
+                self._result.append_positions(hand_landmarks)  # Add array of landmarks
 
         if self._result.raw_result.handedness:
             for idx, handedness in enumerate(self._result.raw_result.handedness):
@@ -362,11 +391,11 @@ class cckkMPHandLandmarker(cckkMediaPipeTask):
     def create_result(self) -> None:
         self._result = cckkMPHandLandmarkerResult(self.name + " result")
 
-    def run(self, data: any = None) -> bool:
+    def run(self, data: Any = None) -> bool:
         if data is not None:
             self.set_image(data)
 
-        self.create_result()
+        self.clear_result()
         self._result.raw_result = self.skill.detect(self.image)
         if self._result.raw_result.hand_landmarks:
             for idx, hand_landmarks in enumerate(
@@ -374,7 +403,7 @@ class cckkMPHandLandmarker(cckkMediaPipeTask):
             ):  # Add array of hands
                 if not hand_landmarks:
                     continue
-                self._result._positions.append(hand_landmarks)  # Add array of landmarks
+                self._result.append_positions(hand_landmarks)  # Add array of landmarks
 
         if self._result.raw_result.handedness:
             for idx, handedness in enumerate(self._result.raw_result.handedness):
