@@ -23,10 +23,10 @@ class cckkPosition:
 
 
 class cckkEdgeAIResult:
-    def __init__(self, hx_max_len : int = 1, name: str = "Result of Edge AI task"):
+    def __init__(self, name: str = "Result of Edge AI task"):
         self._name = name
-        self._hx_man_len = hx_max_len
-        self._hx_positions = deque(maxlen = self._hx_man_len)
+        self._hx_max_len = 0
+        self._hx_objs_lms = deque()
         self.raw_result = None
         self.clear()
 
@@ -35,13 +35,26 @@ class cckkEdgeAIResult:
         return self._name
 
     @property
+    def history(self) -> int:
+        return self._hx_max_len
+
+    @history.setter
+    def history(self, value: int):
+        if value > 0:
+            self._hx_max_len = value
+            self._hx_objs_lms = deque(maxlen=self._hx_max_len)
+
+    @property
     def success(self) -> bool:
-        return len(self._labels) > 0 or len(self._positions) > 0
+        return len(self._labels) > 0 or len(self._objs_lms) > 0
 
     def clear(self) -> None:
         self._labels = []
         self._scores = []
-        self._positions = []
+        self._objs_lms = []  # List of objects, each of which is a list of landmarks
+
+    def populate(self, raw_result: Any) -> None:
+        pass
 
     def num_labels(self) -> int:
         return len(self._labels)
@@ -60,46 +73,54 @@ class cckkEdgeAIResult:
         else:
             return 0
 
-    def num_hx_positions(self) -> int:
-        return len(self._hx_positions)
+    def num_hx_objects(self) -> int:
+        if self._hx_objs_lms is None:
+            return 0
+        return len(self._hx_objs_lms)
 
     def num_objects(self) -> int:
-        return len(self._positions)
+        return len(self._objs_lms)
 
-    def num_positions(self, idx: int = 0) -> int:
-        if idx >= 0 and idx < len(self._positions) and len(self._positions) > 0:
-            return len(self._positions[idx])
+    def num_landmarks(self, idx: int = 0) -> int:
+        if idx >= 0 and idx < len(self._objs_lms) and len(self._objs_lms) > 0:
+            return len(self._objs_lms[idx])
         return 0
 
     def num_polylines(self, idx: int = 0) -> int:
         return 0
 
-    def append_positions(self, positions) -> None:
-        self._positions.append(positions)
-        self._hx_positions.append(positions)
+    def append_objs_lms(self, objs_lms) -> None:
+        self._objs_lms.append(objs_lms)
+        if self._hx_max_len > 0 and self._hx_objs_lms is not None:
+            self._hx_objs_lms.append(objs_lms)
 
-    def position(
+    def _lm2pos(self, landmark, scale_to: list[int]) -> cckkPosition|None:
+        # Convert a landmark return by MediaaPipe to a simple cckkPosition
+        if landmark is None:
+            return None
+        pos = cckkPosition(x=landmark.x, y=landmark.y, z=landmark.z)
+        if len(scale_to) == 2:
+            scale_to.append(1)
+        if len(scale_to) >= 3:
+            pos.x = pos.x * scale_to[0]
+            pos.y = pos.y * scale_to[1]
+            pos.z = pos.z * scale_to[2]
+        return pos
+
+    def landmark(
         self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
     ) -> cckkPosition|None:
-        if idx >= 0 and idx < len(self._positions) and len(self._positions) > 0:
-            points = self._positions[idx]
+        if idx >= 0 and idx < len(self._objs_lms) and len(self._objs_lms) > 0:
+            points = self._objs_lms[idx]
             if sub_idx >= 0 and sub_idx < len(points) and len(points) > 0:
                 # Create a new object so that the result is not modified
-                landmark = points[sub_idx]
-                pos = cckkPosition(x=landmark.x, y=landmark.y, z=landmark.z)
-                if len(scale_to) == 2:
-                    scale_to.append(1)
-                if len(scale_to) >= 3:
-                    pos.x = pos.x * scale_to[0]
-                    pos.y = pos.y * scale_to[1]
-                    pos.z = pos.z * scale_to[2]
-                return pos
+                return self._lm2pos(landmark=points[sub_idx], scale_to=scale_to)
         return None
 
     def pos_xyz(
         self, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
     ) -> list[int]|list[None]:
-        pos = self.position(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
+        pos = self.landmark(idx=idx, sub_idx=sub_idx, scale_to=scale_to)
         if pos is None:
             return [None, None, None]
         return [int(pos.x), int(pos.y), int(pos.z)]
@@ -116,14 +137,19 @@ class cckkEdgeAIResult:
         empty_pts = np.empty((0, 1, 2), dtype=np.int32)
         return empty_pts
 
-    def hx_position(
-        self, hx_idx, idx: int = 0, sub_idx: int = 0, scale_to: list[int] = [1, 1, 1]
-    ) -> cckkPosition|None:
-        if hx_idx >= 0 and hx_idx < self.num_hx_positions():
-            pass
+    def hx_landmark(
+        self, obj_idx: int = 0, lm_idx: int = 0, scale_to: list[int] = [1, 1, 1]
+    ) -> list[cckkPosition]|None:
+        hx_pos = []
+        if self._hx_objs_lms is not None:
+            for hx_result in self._hx_objs_lms:
+                if obj_idx >= 0 and obj_idx < len(hx_result) and len(hx_result) > 0:
+                    obj = hx_result[obj_idx]
+                    if lm_idx >= 0 and lm_idx < len(obj) and len(obj) > 0:
+                        # Create a new object so that the result is not modified
+                        hx_pos.append(self._lm2pos(landmark=obj[lm_idx], scale_to=scale_to))
 
-        return None
-
+        return hx_pos
 
 
 class cckkMediaPipeResult(cckkEdgeAIResult):
@@ -187,14 +213,14 @@ class cckkEdgeAITask:
 
     def run(self, data: Any = None) -> bool:
         """Run the Edge AI task and return success flag"""
-        self.clear_result()
+        self._result.clear()
         return True
 
     def create_result(self) -> None:
         self._result = cckkEdgeAIResult(self.name + " result")
 
-    def clear_result(self) -> None:
-        self._result.clear()
+    def set_result_history(self, length:int = 10) -> None:
+        self._result.history = length
 
 
 class cckkMediaPipeTask(cckkEdgeAITask):
@@ -233,10 +259,6 @@ class cckkMediaPipeTask(cckkEdgeAITask):
     def set_image(self, image: Any, image_format: Any = mp.ImageFormat.SRGB):
         self._image = mp.Image(image_format=image_format, data=image)
 
-    def run(self, data: Any = None) -> bool:
-        self.clear_result()
-        return True
-
     def create_result(self) -> None:
         self._result = cckkMediaPipeResult(self.name + " result")
 
@@ -264,7 +286,7 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
         if data is not None:
             self.set_image(data)
 
-        self.clear_result()
+        self._result.clear()
         self._result.raw_result = self.skill.recognize(self.image)
         if self._result.raw_result.gestures:
             for idx, gestures in enumerate(self._result.raw_result.gestures):
@@ -280,7 +302,7 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
                 if not hand_landmarks:
                     continue
 
-                self._result.append_positions(hand_landmarks)  # Add array of landmarks
+                self._result.append_objs_lms(hand_landmarks)  # Add array of landmarks
 
         if self._result.raw_result.handedness:
             for idx, handedness in enumerate(self._result.raw_result.handedness):
@@ -395,7 +417,7 @@ class cckkMPHandLandmarker(cckkMediaPipeTask):
         if data is not None:
             self.set_image(data)
 
-        self.clear_result()
+        self._result.clear()
         self._result.raw_result = self.skill.detect(self.image)
         if self._result.raw_result.hand_landmarks:
             for idx, hand_landmarks in enumerate(
@@ -403,7 +425,7 @@ class cckkMPHandLandmarker(cckkMediaPipeTask):
             ):  # Add array of hands
                 if not hand_landmarks:
                     continue
-                self._result.append_positions(hand_landmarks)  # Add array of landmarks
+                self._result.append_objs_lms(hand_landmarks)  # Add array of landmarks
 
         if self._result.raw_result.handedness:
             for idx, handedness in enumerate(self._result.raw_result.handedness):
