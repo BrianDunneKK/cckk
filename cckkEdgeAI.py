@@ -22,6 +22,15 @@ class cckkPosition:
     y: float
     z: float
 
+    def scale_to(self, scale_to: list[int] = [1, 1, 1]) -> None:
+        if len(scale_to) == 2:
+            scale_to.append(1)
+        if len(scale_to) >= 3:
+            return cckkPosition(
+                x=self.x * scale_to[0], y=self.y * scale_to[1], z=self.z * scale_to[2]
+            )
+        return None
+
 class cckkObject:
     def __init__(self, name: str = "Object"):
         self._name = name
@@ -29,14 +38,21 @@ class cckkObject:
         self._attributes: dict[str, str] = {}
         self._positions: list[cckkPosition] = []
 
+    def get(self, key: str) -> str:
+        if key in self._attributes:
+            return self._attributes[key]
+        else:
+            return ""
+
+
 class cckkEdgeAIResult:
     def __init__(self, name: str = "Result of Edge AI task"):
         self._name = name
         self._hx_max_len = 0
         self._hx_objs_lms = deque()
         self._raw_result = None
-        self.clear()
         self._objects: list[cckkObject] = []
+        self.clear()
 
     @property
     def name(self) -> str:
@@ -54,9 +70,17 @@ class cckkEdgeAIResult:
 
     @property
     def success(self) -> bool:
-        return len(self._labels) > 0 or len(self._objs_lms) > 0  # At least one label or one object detected
+        return self.num_objects() > 0  # At least one object detected
 
+    def get_obj_attribute(self, obj_idx: int = 0, attr: str = "") -> str:
+        if obj_idx >= 0 and obj_idx < len(self._objects) and len(self._objects) > 0:
+            return self._objects[obj_idx].get(attr)
+        else:
+            return ""
+        
     def clear(self) -> None:
+        self._objects: list[cckkObject] = []
+
         # Label and score for each object
         self._labels = []
         self._scores = []
@@ -68,17 +92,6 @@ class cckkEdgeAIResult:
         # Populate the result labels, objects, landmarks and any other info in the result
         if clear_first:
             self.clear()
-
-    def num_labels(self) -> int:
-        return len(self._labels)
-
-    def label(self, obj_idx: int = 0) -> str:
-        if obj_idx < 0:
-            return ", ".join(self._labels)
-        elif obj_idx >= 0 and obj_idx < len(self._labels) and len(self._labels) > 0:
-            return self._labels[obj_idx]
-        else:
-            return ""
 
     def score(self, obj_idx: int = 0) -> float:
         if obj_idx >= 0 and obj_idx < len(self._scores) and len(self._scores) > 0:
@@ -92,24 +105,15 @@ class cckkEdgeAIResult:
         return len(self._hx_objs_lms)
 
     def num_objects(self) -> int:
-        return len(self._objs_lms)
+        return len(self._objects)
 
     def num_landmarks(self, obj_idx: int = 0) -> int:
-        if obj_idx >= 0 and obj_idx < len(self._objs_lms) and len(self._objs_lms) > 0:
-            return len(self._objs_lms[obj_idx])
+        if obj_idx >= 0 and obj_idx < self.num_objects() and self.num_objects() > 0:
+            return len(self._objects[obj_idx]._positions)
         return 0
 
     def num_polylines(self, obj_idx: int = 0) -> int:
         return 0
-
-    def extend_objs_lms(self, objs_lms) -> None:
-        if objs_lms is not None and len(objs_lms) > 0:
-            self._objs_lms.extend(objs_lms)
-            if self._hx_max_len > 0 and self._hx_objs_lms is not None:
-                self._hx_objs_lms.append(objs_lms)
-
-    def append_objs_lms(self, obj_lms) -> None:
-        self.extend_objs_lms([obj_lms])
 
     def _lm2pos(self, landmark, scale_to: list[int]) -> cckkPosition|None:
         # Convert a landmark return by MediaaPipe to a simple cckkPosition
@@ -127,11 +131,11 @@ class cckkEdgeAIResult:
     def landmark(
         self, obj_idx: int = 0, lm_idx: int = 0, scale_to: list[int] = [1, 1, 1]
     ) -> cckkPosition|None:
-        if obj_idx >= 0 and obj_idx < len(self._objs_lms) and len(self._objs_lms) > 0:
-            points = self._objs_lms[obj_idx]
+        if obj_idx >= 0 and obj_idx < self.num_objects() and self.num_objects() > 0:
+            points = self._objects[obj_idx]._positions
             if lm_idx >= 0 and lm_idx < len(points) and len(points) > 0:
                 # Create a new object so that the result is not modified
-                return self._lm2pos(landmark=points[lm_idx], scale_to=scale_to)
+                return points[lm_idx].scale_to(scale_to=scale_to)
         return None
 
     def pos_xyz(
@@ -316,6 +320,7 @@ class cckkMPGestureRecognizerResult(cckkMediaPipeResult):
 
             obj_result = cckkObject(name=obj_name)
             obj_result._attributes["handedness"] = handedness
+            obj_result._attributes["side"] = handedness
 
             if len(self._raw_result.gestures) > obj_idx:
                 obj_gestures = self._raw_result.gestures[obj_idx]
@@ -327,29 +332,6 @@ class cckkMPGestureRecognizerResult(cckkMediaPipeResult):
                     obj_result._positions.append(cckkPosition(x=lm.x, y=lm.y, z=lm.z))
 
             self._objects.append(obj_result)
-
-
-        if self._raw_result.gestures:
-            for obj_idx, gestures in enumerate(self._raw_result.gestures):
-                if not gestures:
-                    continue
-                self._labels.append(gestures[0].category_name)
-                self._scores.append(gestures[0].score)  # Get confidence score
-
-        if self._raw_result.hand_landmarks:
-            for obj_idx, hand_landmarks in enumerate(
-                self._raw_result.hand_landmarks
-            ):
-                if not hand_landmarks:
-                    continue
-
-                self.append_objs_lms(hand_landmarks)  # Add array of landmarks
-
-        if self._raw_result.handedness:
-            for obj_idx, handedness in enumerate(self._raw_result.handedness):
-                if not handedness:
-                    continue
-                self._sides.append(handedness[0].category_name)
 
 
 class cckkMPGestureRecognizer(cckkMediaPipeTask):
@@ -405,20 +387,12 @@ class cckkMPHandLandmarkerResult(cckkMediaPipeResult):
             obj_lms = self._raw_result.hand_landmarks[obj_idx]
             obj_result = cckkObject(name=obj_name)
             obj_result._attributes["handedness"] = handedness
+            obj_result._attributes["side"] = handedness
 
             for lm_idx, lm in enumerate(obj_lms):
                 obj_result._positions.append(cckkPosition(x=lm.x, y=lm.y, z=lm.z))
 
             self._objects.append(obj_result)
-
-        if self._raw_result.hand_landmarks:
-            self.extend_objs_lms(self._raw_result.hand_landmarks)
-
-        if self._raw_result.handedness:
-            for obj_idx, obj_name in enumerate(self._raw_result.handedness):
-                if not obj_name:
-                    continue
-                self._sides.append(obj_name[0].category_name)
 
     def num_polylines(self, obj_idx: int = 0) -> int:
         if obj_idx >= 0 and obj_idx < self.num_objects():
