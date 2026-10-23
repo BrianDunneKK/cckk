@@ -135,7 +135,7 @@ class cckkEdgeAIResult:
             if lm_idx >= 0 and lm_idx < len(points) and len(points) > 0:
                 # Create a new object so that the result is not modified
                 return points[lm_idx].scale_to(
-                    scale_to=scale_to if len(scale_to) >= 2 else self.scale_to
+                    scale_to=(scale_to if len(scale_to) >= 2 else self.scale_to)
                 )
         return None
 
@@ -177,7 +177,7 @@ class cckkEdgeAIResult:
                     ):
                         # Create a new object so that the result is not modified
                         hx_pos.append(
-                            obj._positions[lm_idx].scale_to(scale_to=scale_to)
+                            obj._positions[lm_idx].scale_to(scale_to=(scale_to if len(scale_to) >= 2 else self.scale_to))
                         )
 
         return hx_pos
@@ -253,25 +253,11 @@ class cckkEdgeAITask:
     def __init__(self, name: str = "Edge AI task"):
         print(f"Initializing Edge AI task {name}")
         self._name = name
-        self._scale_to: list[int] = []
         self.create_result()
 
     @property
     def name(self) -> str:
         return self._name
-
-    @property
-    def scale_to(self) -> list[int]:
-        if len(self._scale_to) == 0:
-            return [1, 1, 1]
-        return self._scale_to
-
-    @scale_to.setter
-    def scale_to(self, value: list[int]):
-        if isinstance(value, list) and len(value) >= 2:
-            if len(value) == 2:
-                value.append(1)
-            self._scale_to = value
 
     @property
     def result(self) -> cckkEdgeAIResult:
