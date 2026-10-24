@@ -1,6 +1,7 @@
 # To Do
 # - History not working correctly when there are multiple hands
 # - Populate score for HandLanmarkerResult and GestureRecognizerResult
+# - Two different ways to record sides
 
 import os
 
@@ -24,7 +25,7 @@ class cckkPosition:
     y: float
     z: float
 
-    def scale_to(self, scale_to: list[int]) -> cckkPosition:
+    def scale_to(self, scale_to: list[int]) -> "cckkPosition":
         if len(scale_to) == 2:
             scale_to.append(1)
         if len(scale_to) >= 3:
@@ -344,6 +345,7 @@ class cckkMPGestureRecognizerResult(cckkMediaPipeResult):
             obj_result = cckkObject(name=obj_name)
             obj_result._attributes["handedness"] = handedness
             obj_result._attributes["side"] = handedness
+            self._sides.append(handedness)
 
             if len(self._raw_result.gestures) > obj_idx:
                 obj_gestures = self._raw_result.gestures[obj_idx]
@@ -459,6 +461,7 @@ class cckkMPHandLandmarkerResult(cckkMediaPipeResult):
             obj_result = cckkObject(name=obj_name)
             obj_result._attributes["handedness"] = handedness
             obj_result._attributes["side"] = handedness
+            self._sides.append(handedness)
 
             for lm_idx, lm in enumerate(obj_lms):
                 obj_result._positions.append(cckkPosition(x=lm.x, y=lm.y, z=lm.z))
