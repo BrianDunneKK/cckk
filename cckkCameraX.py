@@ -6,19 +6,20 @@ IS_RASPBERRY_PI = False
 # Try importing Picamera2 (only works on Raspberry Pi)
 try:
     from picamera2 import Picamera2
-
     IS_RASPBERRY_PI = True
 except ImportError:
     IS_RASPBERRY_PI = False
-
+    Picamera2 = None
 
 class cckkCameraX:
     def __init__(self):
-        self._frame_bgr = None
+        self._frame_bgr: np.typing.NDArray[np.uint8] = np.zeros(
+            (1, 1, 4), dtype=np.uint8
+        )
         self._overlay_text = None  # Overlay with text so don't mirror
         self._overlay_img = None  # Overlay of the image and so mirror with image
 
-        if IS_RASPBERRY_PI:
+        if IS_RASPBERRY_PI and Picamera2 is not None:
             print("Initializing Picamera2 (Raspberry Pi)...")
             self.picam2 = Picamera2()
             config = self.picam2.create_preview_configuration(
@@ -39,15 +40,15 @@ class cckkCameraX:
             self.cap = cv2.VideoCapture(0)
 
     @property
-    def frame_bgr(self) -> any:
+    def frame_bgr(self):
         return self._frame_bgr
 
     @property
-    def frame_rgb(self) -> any:
+    def frame_rgb(self):
         return cv2.cvtColor(self.frame_bgr, cv2.COLOR_BGR2RGB)
 
     @property
-    def shape(self) -> any:
+    def shape(self):
         return self.frame_bgr.shape
 
     @property
@@ -75,11 +76,11 @@ class cckkCameraX:
         if mirror:
             frame_bgr = cv2.flip(frame_bgr, 1)
 
-        self._frame_bgr = frame_bgr
+        self._frame_bgr = np.asarray(frame_bgr, dtype=np.uint8)
         return frame_bgr
 
     def mirror(self) -> "cckkCameraX":
-        self._frame_bgr = cv2.flip(self.frame_bgr, 1)
+        self._frame_bgr = np.asarray(cv2.flip(self.frame_bgr, 1), dtype=np.uint8)
         return self
 
     def frame(self, mirror: bool = False, bgr: bool = True):
@@ -103,19 +104,21 @@ class cckkCameraX:
     def clear_overlays(self) -> "cckkCameraX":
         self._overlay_text = np.zeros((self.height, self.width, 4), dtype=np.uint8)
         self._overlay_img = np.zeros((self.height, self.width, 4), dtype=np.uint8)
-        return self 
+        return self
 
     def putText(
         self,
         text: str,
-        origin,
-        color,
+        origin: tuple[int, int],
+        color: tuple[int, int, int] | tuple[int, int, int, int],
         fontFace: int = cv2.FONT_HERSHEY_SIMPLEX,
         fontScale: float = 1.0,
         thickness: int = 1,
         lineType: int = cv2.LINE_AA,
         bottomLeftOrigin: bool = False,
     ):
+        if self._overlay_text is None:
+            raise RuntimeError("Call clear_overlays() before drawing.")
         cv2.putText(
             self._overlay_text,
             text,
@@ -125,22 +128,49 @@ class cckkCameraX:
             color,
             thickness,
             lineType,
-            bottomLeftOrigin
+            bottomLeftOrigin,
         )
 
+    def circle(
+        self,
+        center: tuple[int, int],
+        radius: int,
+        color: tuple[int, int, int] | tuple[int, int, int, int],
+        thickness: int = 1,
+        lineType: int = cv2.LINE_AA,
+    ):
+        if self._overlay_img is None:
+            raise RuntimeError("Call clear_overlays() before drawing.")
+        cv2.circle(self._overlay_img, center, radius, color, thickness, lineType)
+
+    def polylines(
+        self,
+        list_pts: list[np.ndarray],
+        isClosed: bool,
+        color: tuple[int, int, int] | tuple[int, int, int, int],
+        thickness: int = 1,
+        lineType: int = cv2.LINE_AA,
+    ):
+        if self._overlay_img is None:
+            raise RuntimeError("Call clear_overlays() before drawing.")
+        cv2.polylines(self._overlay_img, list_pts, isClosed, color, thickness, lineType)
 
     def create_overlay(self) -> np.ndarray:
         return np.zeros((self.height, self.width, 4), dtype=np.uint8)
 
-    def frame_overlays(self, overlays_with_flags: list[tuple[np.ndarray, bool]], mirror:bool = True) -> np.ndarray:
+    def frame_overlays(
+        self, overlays_with_flags: list[tuple[np.ndarray, bool]], mirror: bool = True
+    ) -> np.ndarray:
         """Returns a BGR frame with multiple RGBA overlays applied, each with its own mirror flag."""
         frame_bgr = self.frame_bgr.copy()
         if mirror:
             frame_bgr = cv2.flip(frame_bgr, 1)
 
-        if (self._overlay_text is not None):
+        if self._overlay_text is not None:
             frame_bgr = self.add_overlay(False, frame_bgr, self._overlay_text)
 
+        if self._overlay_img is not None:
+            frame_bgr = self.add_overlay(mirror, frame_bgr, self._overlay_img)
 
         for overlay, mirror in overlays_with_flags:
             frame_bgr = self.add_overlay(mirror, frame_bgr, overlay)
@@ -161,6 +191,8 @@ class cckkCameraX:
         alpha = current_overlay[:, :, 3] / 255.0
         alpha_3ch = np.dstack([alpha, alpha, alpha])
 
-            # Perform alpha blending for this layer
-        frame_bgr = (overlay_rgb * alpha_3ch + frame_bgr * (1.0 - alpha_3ch)).astype(np.uint8)
+        # Perform alpha blending for this layer
+        frame_bgr = (overlay_rgb * alpha_3ch + frame_bgr * (1.0 - alpha_3ch)).astype(
+            np.uint8
+        )
         return frame_bgr
