@@ -29,9 +29,10 @@ class cckkPosition:
         if len(scale_to) == 2:
             scale_to.append(1)
         if len(scale_to) >= 3:
-            return cckkPosition(
-                x=self.x * scale_to[0], y=self.y * scale_to[1], z=self.z * scale_to[2]
-            )
+            xpos = (self.x * scale_to[0]) if scale_to[0] > 0 else ((1.0-self.x) * -scale_to[0])
+            ypos = (self.y * scale_to[1]) if scale_to[1] > 0 else ((1.0-self.y) * -scale_to[1])
+            zpos = (self.z * scale_to[2]) if scale_to[2] > 0 else ((1.0-self.z) * -scale_to[2])
+            return cckkPosition(x=xpos, y=ypos, z=zpos)
         return self
 
 
