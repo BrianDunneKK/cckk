@@ -276,6 +276,8 @@ class cckkEdgeAITask:
     def set_result_history(self, length: int = 10) -> None:
         self._result.history = length
 
+    def close(self) -> None:
+        pass
 
 class cckkMediaPipeTask(cckkEdgeAITask):
 
@@ -320,6 +322,7 @@ class cckkMediaPipeTask(cckkEdgeAITask):
     def close(self) -> None:
         if self.skill is not None:
             self.skill.close()
+        super().close()
 
 
 class cckkMPGestureRecognizerResult(cckkMediaPipeResult):
@@ -416,8 +419,9 @@ class cckkMPGestureRecognizer(cckkMediaPipeTask):
         if data is not None:
             self.set_image(data)
 
-        raw_result = self.skill.recognize(self.image)
-        self._result.populate(raw_result, clear_first=True)
+        if self.skill is not None:
+            raw_result = self.skill.recognize(self.image)
+            self._result.populate(raw_result, clear_first=True)
         return self._result.success
 
 
@@ -527,6 +531,7 @@ class cckkMPHandLandmarker(cckkMediaPipeTask):
         if data is not None:
             self.set_image(data)
 
-        raw_result = self.skill.detect(self.image)
-        self._result.populate(raw_result, clear_first=True)
+        if self.skill is not None:
+            raw_result = self.skill.detect(self.image)
+            self._result.populate(raw_result, clear_first=True)
         return self._result.success

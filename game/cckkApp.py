@@ -1,4 +1,5 @@
 import cckk.game.cckkUtils as cckkUtils
+import cckk.game.cckkGameAI as cckkGameAI
 
 # --------------------------------------------------
 
@@ -18,6 +19,7 @@ class cckkApp:
         self.update_config(cckkUtils.merge_dicts(cckkApp.default_config, app_config))
         cckkApp._cckkApp = self
         self._game_mgrs = {}
+        self._ai_tasks : dict[cckkGameAI.cckkAITask, cckkGameAI.cckkAITask] = {}
 
     @property
     def game_in_progress(self):
@@ -41,10 +43,15 @@ class cckkApp:
     def add_game_mgr(self, game_mgr):
         self._game_mgrs[game_mgr] = game_mgr
 
+    def add_ai_task(self, ai_task):
+        self._ai_tasks[ai_task] = ai_task
+
     def init(self) -> bool:
         self._game_status = 1
         for gm in self._game_mgrs:
             gm.init_game()
+        for ait in self._ai_tasks:
+            ait.init_task()
         return True
 
     def start_game(self):
@@ -67,6 +74,10 @@ class cckkApp:
         if rkap is not None:
             self.read_key_and_process(**rkap)
 
+    def run_ai_tasks(self):
+        for ait in self._ai_tasks:
+            ait.run_task()
+
     def update(self):
         pass
 
@@ -82,7 +93,8 @@ class cckkApp:
             self.end_game()
 
     def cleanup(self):
-        pass
+        for ait in self._ai_tasks:
+            ait.cleanup()
 
     def execute(self):
         if self.init() == False:
@@ -94,6 +106,7 @@ class cckkApp:
 
         while self._game_status < 8:
             self.manage_events()
+            self.run_ai_tasks()
             self.update()
             self.draw()
             self.manage_loop()
