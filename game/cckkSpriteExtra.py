@@ -39,7 +39,66 @@ class Sprite_Background(cckkSprite.Sprite):
         self.rect.topleft = (0, 0)
 
 
-### --------------------------------------------------
+# --------------------------------------------------
+
+
+class Sprite_Canvas(cckkSprite.Sprite_Shape):
+    def __init__(self, name="", rect=None, style : dict={}):
+        super().__init__(
+            name,
+            rect,
+            style=cckkUtils.merge_dicts(cckkColours.stylesheet.style("Shape"), style),
+        )
+        self.style_to_pos_size()
+        self.clear()
+        lc = self.get_style_colour("outlinecolour")
+        self._line_col: tuple[int, int, int] = lc if lc is not None else (0, 0, 255)
+        self._line_width = self.get_style("outlinewidth", 1)
+        self._paint_from: tuple[int, int] = (0, 0)
+        self._painting = False
+
+    def clear(self):
+        self._canvas = self.create_surface()
+        fill_col = self.get_style_colour("fillcolour", "white")
+        if fill_col is not None:
+            pygame.draw.rect(self._canvas, fill_col, (0, 0, self.rect.w, self.rect.h))
+        self._draw_reqd = True
+
+    def start_game(self):
+        super().start_game()
+        self.clear()
+
+    def start_painting(self, pos : tuple[int, int]) -> bool:
+        self._paint_from = pos
+        self._painting = True
+        return self._painting
+
+    def end_painting(self) -> bool:
+        self._painting = False
+        return self._painting
+
+    def paint(self, pos: tuple[int, int]) -> bool:
+        ret_ok = False
+        if self._painting and self.rect.overlap_pos(self._paint_from) and self.rect.overlap_pos(pos):
+            x0 = self._paint_from[0] - self.rect.x 
+            y0 = self._paint_from[1] - self.rect.y
+            x1 = pos[0] - self.rect.x
+            y1 = pos[1] - self.rect.y 
+            pygame.draw.line(self._canvas, self._line_col, (x0, y0), (x1, y1), width=self._line_width)
+            ret_ok = True
+        self._paint_from = pos
+        return ret_ok
+
+    def draw(self, draw_flag=cckkSprite.Sprite.DRAW_AS_REQD, clear_draw_reqd=True):
+        super().draw(draw_flag, clear_draw_reqd=False)
+        if (self._draw_reqd or draw_flag > cckkSprite.Sprite.DRAW_AS_REQD) and not self.invisible:
+            self.image = self._canvas
+
+        if clear_draw_reqd:
+            self._draw_reqd = False
+
+
+# --------------------------------------------------
 
 
 class Sprite_Label(cckkSprite.Sprite_TextBox):

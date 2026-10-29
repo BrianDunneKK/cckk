@@ -767,6 +767,12 @@ class MovingRect(cckkRect, Physics):
         dy = dy * my
         self.move_physics(dx, dy)
 
+    def overlap_xy(self, x: int, y:int) -> bool:
+        return (x >= self.left and x <= self.right and y >= self.top and y <= self.bottom)
+
+    def overlap_pos(self, pos: tuple[int, int]) -> bool:
+        return self.overlap_xy(pos[0], pos[1])
+
 # --------------------------------------------------
 
 

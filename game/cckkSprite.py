@@ -75,7 +75,7 @@ class Sprite(pygame.sprite.Sprite):
     def get_style(self, attribute, default=None):
         return self._style.get(attribute, default)
 
-    def get_style_colour(self, attribute, default=None):
+    def get_style_colour(self, attribute, default=None) -> tuple[int, int, int] | None:
         return self._style.get_rgb(attribute, default)
 
     def set_style(self, attribute, new_value):

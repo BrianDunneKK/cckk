@@ -7,7 +7,7 @@ class Style(dict):
     # Key = Style attribute
     # Value = Style value
 
-    def get_rgb(self, attribute, default=None):
+    def get_rgb(self, attribute, default=None) -> tuple[int, int, int] | None:
         val = self.get(attribute, default)
         if val is None:
             return None
@@ -619,7 +619,6 @@ WHEAT3 = RGB(205, 186, 150)
 WHEAT4 = RGB(139, 126, 102)
 WHITE = RGB(255, 255, 255)
 WHITESMOKE = RGB(245, 245, 245)
-WHITESMOKE = RGB(245, 245, 245)
 YELLOW1 = RGB(255, 255, 0)
 YELLOW2 = RGB(238, 238, 0)
 YELLOW3 = RGB(205, 205, 0)
@@ -1056,6 +1055,7 @@ colours['purple3'] = PURPLE3
 colours['purple4'] = PURPLE4
 colours['raspberry'] = RASPBERRY
 colours['rawsienna'] = RAWSIENNA
+colours['red'] = RED1
 colours['red1'] = RED1
 colours['red2'] = RED2
 colours['red3'] = RED3
@@ -1127,6 +1127,7 @@ colours['slategray1'] = SLATEGRAY1
 colours['slategray2'] = SLATEGRAY2
 colours['slategray3'] = SLATEGRAY3
 colours['slategray4'] = SLATEGRAY4
+colours['snow'] = SNOW1
 colours['snow1'] = SNOW1
 colours['snow2'] = SNOW2
 colours['snow3'] = SNOW3
@@ -1174,7 +1175,6 @@ colours['wheat2'] = WHEAT2
 colours['wheat3'] = WHEAT3
 colours['wheat4'] = WHEAT4
 colours['white'] = WHITE
-colours['whitesmoke'] = WHITESMOKE
 colours['whitesmoke'] = WHITESMOKE
 colours['yellow1'] = YELLOW1
 colours['yellow2'] = YELLOW2
