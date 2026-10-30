@@ -1176,6 +1176,7 @@ colours['wheat3'] = WHEAT3
 colours['wheat4'] = WHEAT4
 colours['white'] = WHITE
 colours['whitesmoke'] = WHITESMOKE
+colours['yellow'] = YELLOW1
 colours['yellow1'] = YELLOW1
 colours['yellow2'] = YELLOW2
 colours['yellow3'] = YELLOW3

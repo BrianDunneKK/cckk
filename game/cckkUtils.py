@@ -707,7 +707,18 @@ class Physics:
 # --------------------------------------------------
 
 
-cckkRect = pygame.Rect
+class cckkRect(pygame.Rect):
+    def overlap_xy(self, x: int, y:int) -> bool:
+        return (x >= self.left and x <= self.right and y >= self.top and y <= self.bottom)
+
+    def overlap_pos(self, pos: tuple[int, int]) -> bool:
+        return self.overlap_xy(pos[0], pos[1])
+
+    def size_delta(self, delta_width: int|float = 0, delta_height: int|float = 0) -> "cckkRect":
+        return cckkRect(int(self.x - delta_width/2), int(self.y - delta_height/2), self.width + delta_width, self.height + delta_height)
+
+    def size_factor(self, factor_width: int|float = 0, factor_height: int|float = 0) -> "cckkRect":
+        return self.size_delta(self.width * factor_width, self.height * factor_height)
 
 
 class MovingRect(cckkRect, Physics):
@@ -767,11 +778,6 @@ class MovingRect(cckkRect, Physics):
         dy = dy * my
         self.move_physics(dx, dy)
 
-    def overlap_xy(self, x: int, y:int) -> bool:
-        return (x >= self.left and x <= self.right and y >= self.top and y <= self.bottom)
-
-    def overlap_pos(self, pos: tuple[int, int]) -> bool:
-        return self.overlap_xy(pos[0], pos[1])
 
 # --------------------------------------------------
 

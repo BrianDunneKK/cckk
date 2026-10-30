@@ -43,7 +43,7 @@ class Sprite_Background(cckkSprite.Sprite):
 
 
 class Sprite_Canvas(cckkSprite.Sprite_Shape):
-    def __init__(self, name="", rect=None, style : dict={}):
+    def __init__(self, name="", rect=None, style: dict = {}):
         super().__init__(
             name,
             rect,
@@ -68,7 +68,7 @@ class Sprite_Canvas(cckkSprite.Sprite_Shape):
         super().start_game()
         self.clear()
 
-    def start_painting(self, pos : tuple[int, int]) -> bool:
+    def start_painting(self, pos: tuple[int, int]) -> bool:
         self._paint_from = pos
         self._painting = True
         return self._painting
@@ -79,19 +79,27 @@ class Sprite_Canvas(cckkSprite.Sprite_Shape):
 
     def paint(self, pos: tuple[int, int]) -> bool:
         ret_ok = False
-        if self._painting and self.rect.overlap_pos(self._paint_from) and self.rect.overlap_pos(pos):
-            x0 = self._paint_from[0] - self.rect.x 
+        if (
+            self._painting
+            and self.rect.overlap_pos(self._paint_from)
+            and self.rect.overlap_pos(pos)
+        ):
+            x0 = self._paint_from[0] - self.rect.x
             y0 = self._paint_from[1] - self.rect.y
             x1 = pos[0] - self.rect.x
-            y1 = pos[1] - self.rect.y 
-            pygame.draw.line(self._canvas, self._line_col, (x0, y0), (x1, y1), width=self._line_width)
+            y1 = pos[1] - self.rect.y
+            pygame.draw.line(
+                self._canvas, self._line_col, (x0, y0), (x1, y1), width=self._line_width
+            )
             ret_ok = True
         self._paint_from = pos
         return ret_ok
 
     def draw(self, draw_flag=cckkSprite.Sprite.DRAW_AS_REQD, clear_draw_reqd=True):
         super().draw(draw_flag, clear_draw_reqd=False)
-        if (self._draw_reqd or draw_flag > cckkSprite.Sprite.DRAW_AS_REQD) and not self.invisible:
+        if (
+            self._draw_reqd or draw_flag > cckkSprite.Sprite.DRAW_AS_REQD
+        ) and not self.invisible:
             self.image = self._canvas
 
         if clear_draw_reqd:
@@ -193,7 +201,12 @@ class Sprite_Grid(cckkSprite.Sprite):
     def cell_size(self):
         return (self._xsize, self._ysize)
 
-    def setup_grid(self, cols_rows, xsize_ysize, event_on_click=None):
+    def setup_grid(
+        self,
+        cols_rows: tuple[int, int | None],
+        xsize_ysize: tuple[int, int | None],
+        event_on_click=None,
+    ):
         xsize, ysize = xsize_ysize
         if ysize is None:
             ysize = xsize
@@ -212,6 +225,18 @@ class Sprite_Grid(cckkSprite.Sprite):
 
         self.image = self.create_surface()
         self.event_on_click = event_on_click
+
+    def setup_grid_fit(
+        self,
+        cols_rows: tuple[int, int | None],
+        rect: cckkUtils.cckkRect,
+        event_on_click=None,
+    ):
+        cols, rows = cols_rows
+        xsize = int(rect.width/cols)
+        ysize = int(rect.height/rows) if rows is not None else int(rect.height/cols)
+        self.setup_grid(cols_rows = cols_rows, xsize_ysize = (xsize, ysize), event_on_click=event_on_click,)
+        self.rect.topleft = rect.topleft
 
     def cell_rect(self, col, row, relative=False):
         x = col * self._cell0.width
@@ -448,6 +473,37 @@ class Sprite_ImageGridActor(cckkSprite.Sprite_Animation, cckkUtils.GridActor):
         super().move_to(cell_pos, new_dir)
         self._update_image_pos()
         self.image_dir = new_dir
+
+
+### --------------------------------------------------
+
+
+class Sprite_ColouredGrid(Sprite_Grid):
+    def __init__(self, name="Coloured Grid", colours: list[list[str]] = [[]]):
+        super().__init__(name)
+
+        self._rgb_colours: list[list[tuple[int, int, int]]] = [
+            [cckkColours.colours[colour] for colour in sublist] for sublist in colours
+        ]
+
+    def draw(self, draw_flag=cckkSprite.Sprite.DRAW_AS_REQD, clear_draw_reqd=True):
+        if self._draw_reqd or draw_flag:
+            self._draw_reqd = False
+
+        for i in range(0, self.cols):
+            for j in range(0, self.rows):
+                r = self.cell_rect(i, j, True)
+                # if 0 <= j < len(rgb_colours) and 0 <= i < len(rgb_colours[j]):
+                col = self._rgb_colours[j][i]
+                if col is not None and self.image is not None:
+                    pygame.draw.rect(self.image, col, r)
+                line_col = self.get_style_colour("outlinecolour")
+                line_w = self.get_style("outlinewidth", 1)
+                if line_col is not None and self.image is not None:
+                    pygame.draw.rect(self.image, line_col, r, line_w)
+
+        if clear_draw_reqd:
+            self._draw_reqd = False
 
 
 ### --------------------------------------------------
