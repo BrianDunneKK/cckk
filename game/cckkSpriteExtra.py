@@ -57,6 +57,14 @@ class Sprite_Canvas(cckkSprite.Sprite_Shape):
         self._paint_from: tuple[int, int] = (0, 0)
         self._painting = False
 
+    @property
+    def paint_colour(self) -> tuple[int, int, int]:
+        return self._line_col
+
+    @paint_colour.setter
+    def paint_colour(self, new_colour : tuple[int, int, int]):
+        self._line_col = new_colour
+
     def clear(self):
         self._canvas = self.create_surface()
         fill_col = self.get_style_colour("fillcolour", "white")

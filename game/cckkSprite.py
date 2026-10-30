@@ -139,6 +139,15 @@ class Sprite(pygame.sprite.Sprite):
     def cckkimage(self):
         return self._image
 
+    def get_pixel(
+        self, x: int, y: int, inc_alpha: bool = False
+    ) -> tuple[int, int, int] | tuple[int, int, int, int] | None:
+        if self._image is None:
+            return None
+        rel_x = x - self.rect.x
+        rel_y = y - self.rect.y
+        return self._image.get_pixel(x=rel_x, y=rel_y, inc_alpha=inc_alpha)
+
     def _load_image_from_file(self, filename, crop=None, scale_to=None):
         img = cckkUtils.cckkImage()
         ret_image = image = pygame.image.load(img.image_path(filename)).convert_alpha()
