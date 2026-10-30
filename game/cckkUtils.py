@@ -1893,7 +1893,7 @@ class GridMaze(GridMap):
 
 # --------------------------------------------------
 
-class cckkJoystick:
+class Joystick:
     def __init__(self, joystick_name=None, joystick_number=None):
         self._joystick = None
         self.limits = None

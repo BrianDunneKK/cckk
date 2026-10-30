@@ -96,7 +96,7 @@ class PyGameApp(cckkApp.cckkApp):
             )
             self.event_mgr.user_event(cckkUtils.EVENT_SCROLL_GAME, "ScrollGame")
 
-        self._joystick = cckkUtils.cckkJoystick(
+        self._joystick = cckkUtils.Joystick(
             self.get_config("joystick_name"), self.get_config("joystick_number")
         )
         self._clock = pygame.time.Clock()

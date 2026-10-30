@@ -14,7 +14,7 @@ from collections import deque
 import cv2
 import numpy as np
 import mediapipe as mp
-from mediapipe.tasks import python
+from mediapipe.tasks import python as mpt_python
 from mediapipe.tasks.python import vision
 from dataclasses import dataclass
 
@@ -289,11 +289,11 @@ class cckkMediaPipeTask(cckkEdgeAITask):
         self._task_file = task_file
         self._task_path_file = task_path + task_file
         if self._task_path_file != "":
-            self._base_options = python.BaseOptions(
+            self._base_options = mpt_python.BaseOptions(
                 model_asset_path=self._task_path_file
             )
         else:
-            self._base_options = python.BaseOptions()
+            self._base_options = mpt_python.BaseOptions()
         self._image = None
         self._skill = None
 
@@ -325,10 +325,10 @@ class cckkMediaPipeTask(cckkEdgeAITask):
         super().close()
 
 
+
+
 class cckkMPGestureRecognizerResult(cckkMediaPipeResult):
-    def populate(
-        self, raw_result: vision.GestureRecognizerResult, clear_first: bool = True
-    ) -> None:
+    def populate(self, raw_result: vision.GestureRecognizerResult, clear_first: bool = True) -> None:
         if clear_first:
             self.clear()
         self._raw_result = raw_result

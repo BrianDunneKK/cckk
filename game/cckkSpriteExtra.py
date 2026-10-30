@@ -317,7 +317,7 @@ class Sprite_BoardGame_Board(Sprite_Grid):
                         col = self.get_style_colour("fillcolour")
                 if col is not None and self.image is not None:
                     pygame.draw.rect(self.image, col, r)
-                if img is not None and self.image is not None:
+                if img is not None and self.image is not None and img.surface is not None:
                     self.image.blit(img.surface, r)
                 line_col = self.get_style_colour("outlinecolour")
                 line_w = self.get_style("outlinewidth", 1)
@@ -423,7 +423,7 @@ class Sprite_ImageGrid(Sprite_Grid):
         img.set_spritesheet(
             spritesheet[0], spritesheet[1], spritesheet[2], scale_to=self.cell_size
         )
-        if self.image is not None:
+        if self.image is not None and img.surface is not None:
             for i in range(0, self.rows):
                 for j in range(0, self.cols):
                     img.spritesheet_image(sprites[i * self.cols + j])
@@ -501,8 +501,10 @@ class Sprite_ColouredGrid(Sprite_Grid):
         for i in range(0, self.cols):
             for j in range(0, self.rows):
                 r = self.cell_rect(i, j, True)
-                # if 0 <= j < len(rgb_colours) and 0 <= i < len(rgb_colours[j]):
-                col = self._rgb_colours[j][i]
+                if 0 <= j < len(self._rgb_colours) and 0 <= i < len(self._rgb_colours[j]):
+                    col = self._rgb_colours[j][i]
+                else:
+                    col = None
                 if col is not None and self.image is not None:
                     pygame.draw.rect(self.image, col, r)
                 line_col = self.get_style_colour("outlinecolour")

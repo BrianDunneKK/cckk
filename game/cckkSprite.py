@@ -406,6 +406,7 @@ class Sprite_Shape(Sprite):
         if rect is not None:
             self.rect.topleft = rect.topleft
             self.rect.size = rect.size
+        self.style_to_pos_size()
         self._draw_reqd = True
 
     @property
@@ -662,7 +663,7 @@ class SpriteGroup(pygame.sprite.LayeredUpdates):
 
 
 class SpriteGridSet(SpriteGroup):
-    def __init__(self, name, rect, xcols, yrows, margin=0):
+    def __init__(self, name:str, rect:cckkUtils.cckkRect, xcols:int, yrows:int, margin:int=0):
         super().__init__(name)
         self.rect = rect
         self.xcols = xcols
@@ -670,11 +671,19 @@ class SpriteGridSet(SpriteGroup):
         self.margin = margin
 
     def add_shape_xy(self, sprite, x, y):
-        w = (self.rect.width - (self.xcols - 1) * self.margin) / self.xcols
-        h = (self.rect.height - (self.yrows - 1) * self.margin) / self.yrows
-        l = self.rect.left + (self.rect.width * x) / self.xcols
-        t = self.rect.top + (self.rect.height * y) / self.yrows
-        sprite.rect = cckkUtils.cckkRect(l, t, w, h)
+        w = (self.rect.width - (self.xcols - 1) * self.margin) / self.xcols  # Shape width
+        h = (self.rect.height - (self.yrows - 1) * self.margin) / self.yrows  # Shape height
+        cx = self.rect.left + w/2 + (self.rect.width * x) / self.xcols
+        cy = self.rect.top + h/2 + (self.rect.height * y) / self.yrows
+
+        if sprite.rect.width > 0 and sprite.rect.width < w:
+            w = sprite.rect.width
+        if sprite.rect.height > 0 and sprite.rect.height < h:
+            h = sprite.rect.height
+
+        sprite.rect = cckkUtils.cckkRect(0, 0, w, h)
+        sprite.rect.centerx = cx
+        sprite.rect.centery = cy
         sprite.set_config("xcol", x)
         sprite.set_config("yrow", y)
         self.add(sprite)
