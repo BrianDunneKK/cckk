@@ -8,6 +8,7 @@ import random
 import os
 import readchar
 import re
+from typing import Any
 
 # --------------------------------------------------
 
@@ -925,7 +926,7 @@ class EventManager:
         pygame.event.post(e)
 
     @staticmethod
-    def create_event(event_type, action="", **info_items):
+    def create_event(event_type, action="", **info_items) -> pygame.event.Event:
         if type(event_type).__name__ == "tuple":
             t, a = event_type
             return EventManager.create_event(t, a, info_items)
@@ -936,6 +937,13 @@ class EventManager:
             ev_dict = {"action": action, "info": info}
             e = pygame.event.Event(event_type, ev_dict)
             return e
+
+    @staticmethod
+    def extend_event(event: pygame.event.Event, extra_attr: dict[str, Any]) -> pygame.event.Event:
+        """Returns a new pygame.event.Event with additional attributes merged from a dictionary."""
+        combined_info = {**event.info, **extra_attr}
+        ev_dict = {"action": event.action, "info": combined_info}
+        return pygame.event.Event(event.type, ev_dict)
 
     @staticmethod
     def gc_event(action, **info_items):

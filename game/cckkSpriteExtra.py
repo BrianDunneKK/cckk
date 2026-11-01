@@ -196,6 +196,7 @@ class Sprite_Grid(cckkSprite.Sprite):
         self._rows = self._cols = 0
         self._cell0 = pygame.Rect(0, 0, 0, 0)
         self._xsize = self._ysize = 0
+        self._event_data: list[list[dict]] = [[]]
 
     @property
     def rows(self):
@@ -283,6 +284,21 @@ class Sprite_Grid(cckkSprite.Sprite):
             return (cellp[0], cellp[1])
         else:
             return (-1, -1)
+
+    def setup_grid_events(self, event_data: list[list[dict]]):
+        for i in range(0, len(event_data)):
+            for j in range(0, len(event_data[i])):
+                if event_data[i][j] is None:
+                    event_data[i][j] = {}
+        self._event_data = event_data
+
+    def enrich_event(self, ev : pygame.event.Event) -> pygame.event.Event:
+        xcol, yrow = self.find_cell(ev.pos, allow_outside=False)
+        if 0 <= yrow < len(self._event_data) and 0 <= xcol < len(self._event_data[0]):
+            ev_extra_data = self._event_data[yrow][xcol] 
+            return cckkUtils.EventManager.extend_event(ev, ev_extra_data)
+        else:
+            return ev
 
 
 ### --------------------------------------------------
@@ -493,6 +509,14 @@ class Sprite_ColouredGrid(Sprite_Grid):
         self._rgb_colours: list[list[tuple[int, int, int]]] = [
             [cckkColours.colours[colour] for colour in sublist] for sublist in colours
         ]
+
+        # prepare colour names and RGB tuples for enrish_event()
+        ev_data = [
+            [{"colour": colour, "rgb": cckkColours.colours[colour], "foo": "bar"} for colour in row]
+            for row in colours
+        ]
+        self.setup_grid_events(ev_data)
+
 
     def draw(self, draw_flag=cckkSprite.Sprite.DRAW_AS_REQD, clear_draw_reqd=True):
         if self._draw_reqd or draw_flag:

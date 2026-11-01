@@ -142,6 +142,7 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
                     sprite_str = s.name
                     ev = s.event_on_click
                     ev.pos = x, y
+                    ev = s.enrich_event(ev)
                     cckkUtils.EventManager.post(ev)
                 elif s.event_on_unclick != None and not click_event:
                     sprite_str = s.name

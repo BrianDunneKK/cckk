@@ -9,6 +9,7 @@
 
 import pygame
 import pygame.gfxdraw
+import pygame.event
 import uuid
 from math import sin, cos
 import cckk.game.cckkUtils as cckkUtils
@@ -246,7 +247,9 @@ class Sprite(pygame.sprite.Sprite):
             cckkUtils.logger.error(
                 "Sprite.setup_mouse_events(): event_on_unclick must be of type Event"
             )
-        self.event_on_unclick = event_on_unclick
+
+    def enrich_event(self, ev : pygame.event.Event) -> pygame.event.Event:
+        return ev
 
     def create_mask(self):
         self.mask = (
