@@ -896,16 +896,16 @@ EVENT_NEXT_USER_EVENT = pygame.USEREVENT + 6
 # Game Control Actions
 #   e.action: StartGame, GameOver, ClearGameOver, QuitGame, Board, Pass, Hint, ClearHint, Print, Keyboard,
 #             UpdateScore, KillSpriteUUID, MouseMotion, MouseLeftClick, MouseRightClick, MouseUnclick
-#   e.info: Dictionary with additional event information, including:
-#             pos   - Mouse position for MouseMotion, MouseLeftClick, MouseRightClick and MouseUnclick
-#             value - Delta value for UpdateScore
-#             key   - Name of key pressed
+#   e.pos:    Mouse position for MouseMotion, MouseLeftClick, MouseRightClick and MouseUnclick
+#   e.value   Delta value for UpdateScore
+#   e.key     Name of key pressed
+# Access all event attributes using getattr(event, attribute", default_value)
 
 class EventManager:
     @staticmethod
-    def info_to_str(e):
+    def dict_to_str(e):
         strlist = []
-        for k, v in e.info.items():
+        for k, v in e.dict.items():
             strlist.append(str(k) + "=" + str(v))
         return ", ".join(strlist)
 
@@ -920,53 +920,39 @@ class EventManager:
             logger.error("Max value for event type is {0}".format(e.type))
 
         if e.action != "MouseMotion":
-            logger.debug("Post event: Type={0}, Action={1}, Info={2}".format(
-                e.type, e.action, EventManager.info_to_str(e)))
+            logger.debug("Post event: Type={0}, Action={1}, Dict={2}".format(
+                e.type, e.action, EventManager.dict_to_str(e)))
 
         pygame.event.post(e)
 
     @staticmethod
-    def create_event(event_type, action="", **info_items) -> pygame.event.Event:
-        if type(event_type).__name__ == "tuple":
-            t, a = event_type
-            return EventManager.create_event(t, a, info_items)
-        else:
-            info = {}
-            for key, value in info_items.items():
-                info[key] = value
-            ev_dict = {"action": action, "info": info}
-            e = pygame.event.Event(event_type, ev_dict)
-            return e
+    def create_event(event_type:int, action:str="", **ev_dict) -> pygame.event.Event:
+        ev_dict = {"action": action, **ev_dict}
+        e = pygame.event.Event(event_type, ev_dict)
+        return e
 
     @staticmethod
-    def extend_event(event: pygame.event.Event, extra_attr: dict[str, Any]) -> pygame.event.Event:
+    def extend_event(event: pygame.event.Event, extra_dict: dict[str, Any]) -> pygame.event.Event:
         """Returns a new pygame.event.Event with additional attributes merged from a dictionary."""
-        combined_info = {**event.info, **extra_attr}
-        ev_dict = {"action": event.action, "info": combined_info}
+        ev_dict = {**event.dict, **extra_dict}
         return pygame.event.Event(event.type, ev_dict)
 
     @staticmethod
-    def gc_event(action, **info_items):
-        return EventManager.create_event(EVENT_GAME_CONTROL, action, **info_items)
+    def gc_event(action, **ev_dict):
+        return EventManager.create_event(EVENT_GAME_CONTROL, action, **ev_dict)
 
     @staticmethod
-    def post_game_control(action, **info_items):
+    def post_game_control(action, **ev_dict):
         # if (action == "StartGame" or action == "GameOver" or action == "Quit") and not("broadcast" in info_items):
         #     ev = EventManager.create_event(EVENT_GAME_CONTROL, action, broadcast=True, **info_items)
         #     logger.debug("Post (broadcast): " + action)
         # else:
-        ev = EventManager.create_event(
-            EVENT_GAME_CONTROL, action, **info_items)
+        ev = EventManager.create_event(EVENT_GAME_CONTROL, action, **ev_dict)
         EventManager.post(ev)
 
     @staticmethod
     def is_broadcast(e):
-        ret = False
-        if "info" in e.dict:
-            if "broadcast" in e.info:
-                if e.info['broadcast']:
-                    ret = True
-        return ret
+        return getattr(e, "broadcast", False)
 
     @staticmethod
     def set_key_repeat(delay, interval):
@@ -1924,15 +1910,17 @@ class Joystick:
 
     def update_event(self, ev):
         if ev.action == "JoystickMotion" and self._joystick is not None and self.limits is not None:
-            val = ev.info["value"]
-            if self.steps is not None and self.steps != 0:
-                val = ev.info["value"] = round(val * self.steps, 0) / self.steps
+            val = getattr(ev, "value", 0)
+            if self.steps is not None and self.steps != 0 and val is not None:
+                val = ev.value = round(val * self.steps, 0) / self.steps
             pos = 0
-            if ev.info["axis"] == "X":
+
+            axis = getattr(ev, "axis", None)
+            if axis == "X":
                 pos = self.limits.centerx + ((self.limits.width - self.obj_size[0])/2) * val
-            if ev.info["axis"] == "Y":
+            if axis == "Y":
                 pos = self.limits.centery + ((self.limits.height - self.obj_size[1])/2) * val
-            ev.info["pos"] = pos
+            ev.pos = pos
         return ev
 
 # --------------------------------------------------

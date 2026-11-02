@@ -155,12 +155,12 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
         dealt_with = False
         if e.type == cckkUtils.EVENT_GAME_CONTROL:
             if e.action == "MouseLeftClick" or e.action == "MouseUnclick":
-                x, y = e.info['pos']
+                x, y = e.pos
                 sprite_str = self.find_click(
                     x, y, (e.action == "MouseLeftClick"))
                 dealt_with = (sprite_str != "")
             elif e.action == "KillSpriteUUID":
-                dealt_with = self.kill_uuid(e.info['uuid'])
+                dealt_with = self.kill_uuid(e.uuid)
         return dealt_with
 
     def cleanup(self):
@@ -253,10 +253,10 @@ class SM_Scoreboard(SpriteManager):
         if not dealt_with and e.type == cckkUtils.EVENT_GAME_CONTROL:
             dealt_with = True
             if e.action == "UpdateScore":
-                self.score = self.score + e.info['score']
+                self.score = self.score + e.score
             elif e.action == "IncreaseTime":
                 if self._timer is not None:
-                    self._timer.extend_timer(e.info["increment"])
+                    self._timer.extend_timer(e.increment)
             elif e.action == "ClearGameOver":
                 self.clear_game_over()
             else:
