@@ -35,6 +35,36 @@ class cckkPosition:
             return cckkPosition(x=xpos, y=ypos, z=zpos)
         return self
 
+    @staticmethod
+    def scale_xy(
+        pos_xy: tuple[float, float],
+        scale_to: tuple[int, int],
+        mirror: bool = False,
+        pos_min: tuple[float, float] = (0.0, 0.0),
+        pos_max: tuple[float, float] = (1.0, 1.0),
+    ) -> tuple[int, int]:
+        x = pos_xy[0] if not mirror else (1.0 - pos_xy[0])
+        if len(pos_xy) >= 2 and len(scale_to) >= 2 and len(pos_min) >= 2 and len(pos_max) >= 2:
+            xpos = ((x - pos_min[0]) / (pos_max[0] - pos_min[0])) * scale_to[0]
+            ypos = ((pos_xy[1] - pos_min[1]) / (pos_max[1] - pos_min[1])) * scale_to[1]
+            return (int(xpos), int(ypos))
+        return pos_xy
+
+class cckkVector2D:
+    def __init__(self, pos0: tuple[float, float], pos1: tuple[float, float]):
+        self.x0: float = pos0[0]
+        self.y0: float = pos0[1]
+        self.x1: float = pos1[0]
+        self.y1: float = pos1[1]
+
+    @property
+    def length(self) -> float:
+        return ((self.x1 - self.x0) ** 2 + (self.y1 - self.y0) ** 2) ** 0.5
+
+    @property
+    def angle(self) -> float:
+        return np.arctan2(self.y1 - self.y0, self.x1 - self.x0) * 180.0 / np.pi
+
 
 class cckkObject:
     def __init__(self, name: str = "Object"):
@@ -143,17 +173,27 @@ class cckkEdgeAIResult:
 
     def pos_xyz(
         self, obj_idx: int = 0, lm_idx: int = 0, scale_to: list[int] = []
-    ) -> list[int]:
+    ) -> tuple[int, int, int]:
         pos = self.landmark(obj_idx=obj_idx, lm_idx=lm_idx, scale_to=scale_to)
         if pos is None:
-            return [0, 0, 0]
-        return [int(pos.x), int(pos.y), int(pos.z)]
+            return (0, 0, 0)
+        return (int(pos.x), int(pos.y), int(pos.z))
 
     def pos_xy(
         self, obj_idx: int = 0, lm_idx: int = 0, scale_to: list[int] = []
-    ) -> list[int]:
+    ) -> tuple[int, int]:
         pos = self.pos_xyz(obj_idx=obj_idx, lm_idx=lm_idx, scale_to=scale_to)
-        return [pos[0], pos[1]]
+        return (pos[0], pos[1])
+
+    def landmark_vector(
+        self, obj0_idx: int = 0, lm0_idx: int = 0, obj1_idx: int = 0, lm1_idx: int = 0
+    ) -> cckkVector2D:
+        pos0 = self.landmark(obj_idx=obj0_idx, lm_idx=lm0_idx)
+        pos1 = self.landmark(obj_idx=obj1_idx, lm_idx=lm1_idx)
+        return cckkVector2D(
+            pos0=(pos0.x, pos0.y) if pos0 is not None else (0.0, 0.0),
+            pos1=(pos1.x, pos1.y) if pos1 is not None else (0.0, 0.0),
+        )
 
     def polyline(
         self, obj_idx: int = 0, poly_idx: int = 0, scale_to: list[int] = []
@@ -323,8 +363,6 @@ class cckkMediaPipeTask(cckkEdgeAITask):
         if self.skill is not None:
             self.skill.close()
         super().close()
-
-
 
 
 class cckkMPGestureRecognizerResult(cckkMediaPipeResult):
