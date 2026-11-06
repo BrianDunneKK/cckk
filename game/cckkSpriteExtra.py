@@ -85,6 +85,13 @@ class Sprite_Canvas(cckkSprite.Sprite_Shape):
         self._painting = False
         return self._painting
 
+    def toggle_painting(self, pos: tuple[int, int]) -> bool:
+        if self._painting:
+            self.end_painting()
+        else:
+            self.start_painting(pos=pos)
+        return self._painting
+
     def paint(self, pos: tuple[int, int]) -> bool:
         ret_ok = False
         if (
