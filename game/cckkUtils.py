@@ -709,6 +709,24 @@ class Physics:
 
 
 class cckkRect(pygame.Rect):
+    def __str__(self):
+        return f"x={self.x}, y={self.y}, w={self.w}, h={self.h}"
+
+    def set_as_mer(self, points: list[tuple[int, int]] = []):
+        if not points:
+            self.topleft = (0, 0)
+            self.size = (0, 0)
+            return self
+        else:
+            min_x = min(pt[0] for pt in points)
+            min_y = min(pt[1] for pt in points)
+            max_x = max(pt[0] for pt in points)
+            max_y = max(pt[1] for pt in points)
+            self.topleft = (min_x, min_y)
+            self.width = max_x - min_x
+            self.height = max_y - min_y
+        return self
+    
     def overlap_xy(self, x: int, y:int) -> bool:
         return (x >= self.left and x <= self.right and y >= self.top and y <= self.bottom)
 

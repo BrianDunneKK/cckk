@@ -39,7 +39,7 @@ class cckkPosition:
     def scale_xy(
         pos_xy: tuple[float, float],
         scale_to: tuple[int, int],
-        mirror: bool = False,
+        mirror: bool = True,
         pos_min: tuple[float, float] = (0.0, 0.0),
         pos_max: tuple[float, float] = (1.0, 1.0),
     ) -> tuple[int, int]:
@@ -179,10 +179,18 @@ class cckkEdgeAIResult:
             return (0, 0, 0)
         return (int(pos.x), int(pos.y), int(pos.z))
 
-    def pos_xy(
-        self, obj_idx: int = 0, lm_idx: int = 0, scale_to: list[int] = []
-    ) -> tuple[int, int]:
+    def pos_xyz_raw(self, obj_idx: int = 0, lm_idx: int = 0) -> tuple[float, float, float]:
+        pos = self.landmark(obj_idx=obj_idx, lm_idx=lm_idx, scale_to=[1, 1, 1])
+        if pos is None:
+            return (0.0, 0.0, 0.0)
+        return (pos.x, pos.y, pos.z)
+
+    def pos_xy(self, obj_idx: int = 0, lm_idx: int = 0, scale_to: list[int] = []) -> tuple[int, int]:
         pos = self.pos_xyz(obj_idx=obj_idx, lm_idx=lm_idx, scale_to=scale_to)
+        return (pos[0], pos[1])
+
+    def pos_xy_raw(self, obj_idx: int = 0, lm_idx: int = 0) -> tuple[float, float]:
+        pos = self.pos_xyz_raw(obj_idx=obj_idx, lm_idx=lm_idx)
         return (pos[0], pos[1])
 
     def landmark_vector(
@@ -201,7 +209,7 @@ class cckkEdgeAIResult:
         empty_pts = np.empty((0, 1, 2), dtype=np.int32)
         return empty_pts
 
-    def wireframe(self, obj_idx: int = 0, scale_to: list[int] = []) -> list[np.ndarray]:
+    def wireframe(self, obj_idx: int = 0, scale_to: list[int]|None = []) -> list[np.ndarray]:
         return []
 
     def hx_landmark(
@@ -407,26 +415,38 @@ class cckkMPGestureRecognizerResult(cckkMediaPipeResult):
             return 0
 
     def polyline(
-        self, obj_idx: int = 0, poly_idx: int = 0, scale_to: list[int] = []
+        self, obj_idx: int = 0, poly_idx: int = 0, scale_to: list[int]|None = []
     ) -> np.ndarray:
         poly_map = cckkPolylineMap.get("hand", {})
         poly_points = poly_map.get(poly_idx, [])
         if len(poly_points) > 0:
-            pline = np.array(
-                [
-                    self.pos_xy(obj_idx=obj_idx, lm_idx=lm_idx, scale_to=scale_to)
-                    for lm_idx in poly_points
-                ],
-                np.int32,
-            )
+            if scale_to is not None:
+                pline = np.array(
+                    [
+                        self.pos_xy(obj_idx=obj_idx, lm_idx=lm_idx, scale_to=scale_to)
+                        for lm_idx in poly_points
+                    ],
+                    np.int32,
+                )
+            else:
+                pline = np.array(
+                    [
+                        self.pos_xy_raw(obj_idx=obj_idx, lm_idx=lm_idx)
+                        for lm_idx in poly_points
+                    ],
+                    np.float32,
+                )
         else:
-            pline = np.empty((0, 1, 2), dtype=np.int32)
+            if scale_to is not None:
+                pline = np.empty((0, 1, 2), dtype=np.int32)
+            else:
+                pline = np.empty((0, 1, 2), dtype=np.float32)
 
         pline = pline.reshape((-1, 1, 2))
         return pline
 
 
-    def wireframe(self, obj_idx: int = 0, scale_to: list[int] = []) -> list[np.ndarray]:
+    def wireframe(self, obj_idx: int = 0, scale_to: list[int]|None = []) -> list[np.ndarray]:
         wf: list[np.ndarray] = []
         for poly_idx in range(self.num_polylines(obj_idx=obj_idx)):
             pline = self.polyline(obj_idx=obj_idx, poly_idx=poly_idx, scale_to=scale_to)

@@ -99,14 +99,15 @@ class Sprite(pygame.sprite.Sprite):
         y = self.get_style("ypos")
         w = self.get_style("width")
         h = self.get_style("height")
-        if x is not None:
-            self.rect.left = x
-        if y is not None:
-            self.rect.top = y
-        if w is not None:
-            self.rect.width = w
-        if h is not None:
-            self.rect.height = h
+        if self.rect is not None:
+            if x is not None:
+                self.rect.left = x
+            if y is not None:
+                self.rect.top = y
+            if w is not None:
+                self.rect.width = w
+            if h is not None:
+                self.rect.height = h
         if w is not None or h is not None:
             self.image = self.create_surface()
             self._image_size_to_rect()
@@ -133,8 +134,9 @@ class Sprite(pygame.sprite.Sprite):
         self._draw_reqd = True
 
     def _image_size_to_rect(self):
-        self.rect.width = self.image.get_rect().width if self.image is not None else 0
-        self.rect.height = self.image.get_rect().height if self.image is not None else 0
+        if self.rect is not None:
+            self.rect.width = self.image.get_rect().width if self.image is not None else 0
+            self.rect.height = self.image.get_rect().height if self.image is not None else 0
 
     @property
     def cckkimage(self):
@@ -143,11 +145,11 @@ class Sprite(pygame.sprite.Sprite):
     def get_pixel(
         self, x: int, y: int, inc_alpha: bool = False
     ) -> tuple[int, int, int] | tuple[int, int, int, int] | None:
-        if self._image is None:
+        if self._image is None or self.rect is None:
             return None
         rel_x = x - self.rect.x
         rel_y = y - self.rect.y
-        return self._image.get_pixel(x=rel_x, y=rel_y, inc_alpha=inc_alpha)
+        return self._image.get_pixel(x=int(rel_x), y=int(rel_y), inc_alpha=inc_alpha)
 
     def _load_image_from_file(self, filename, crop=None, scale_to=None):
         img = cckkUtils.cckkImage()
@@ -219,14 +221,15 @@ class Sprite(pygame.sprite.Sprite):
 
     def create_surface(self, width=None, height=None, per_pixel_alpha=True):
         # logger.debug("create_surface()")
-        if width is None:
+        if width is None and self.rect is not None:
             width = self.rect.width
-        if height is None:
+        if height is None and self.rect is not None:
             height = self.rect.height
-        if per_pixel_alpha:
-            return pygame.Surface((width, height), pygame.SRCALPHA).convert_alpha()
-        else:
-            return pygame.Surface((width, height)).convert()
+        if width is not None and height is not None:
+            if per_pixel_alpha:
+                return pygame.Surface((width, height), pygame.SRCALPHA).convert_alpha()
+            else:
+                return pygame.Surface((width, height)).convert()
 
     def add_image(self, image, dest=(0, 0)):
         return self.image.blit(image, dest) if self.image is not None else None
@@ -405,8 +408,9 @@ class Sprite_Shape(Sprite):
             style=cckkUtils.merge_dicts(cckkColours.stylesheet.style("Shape"), style),
         )
         self._pointlist = None
+        self._wireframe : list[list[tuple[int, int]]] = [[]]
         self._pie_angles = None
-        if rect is not None:
+        if rect is not None and self.rect is not None:
             self.rect.topleft = rect.topleft
             self.rect.size = rect.size
         self.style_to_pos_size()
@@ -434,7 +438,13 @@ class Sprite_Shape(Sprite):
         self._pointlist = pointlist.copy()
         self._draw_reqd = True
 
+    def setup_wireframe(self, wireframe: list[list[tuple[int, int]]] = [[]]):
+        self._wireframe = wireframe.copy()
+        self.draw(Sprite.DRAW_AFTER_CLEAR)
+
     def setup_pie(self, start_angle, stop_angle):
+        if self.rect is None:
+            return
         self._pie_angles = [start_angle * 3.14159 / 180, stop_angle * 3.14159 / 180]
         x0 = self.rect.width / 2
         y0 = self.rect.height / 2
@@ -464,7 +474,7 @@ class Sprite_Shape(Sprite):
 
     def draw(self, draw_flag=Sprite.DRAW_AS_REQD, clear_draw_reqd=True):
         super().draw(draw_flag, clear_draw_reqd=False)
-        if (self._draw_reqd or draw_flag > Sprite.DRAW_AS_REQD) and not self.invisible:
+        if (self._draw_reqd or draw_flag > Sprite.DRAW_AS_REQD) and not self.invisible and self.rect is not None:
             draw_rect = self.rect.copy()
             draw_rect.topleft = (0, 0)
             fill_col = self.get_style_colour("fillcolour")
@@ -489,7 +499,7 @@ class Sprite_Shape(Sprite):
                 #     if (line_col is not None):
                 #         pygame.draw.arc(self.image, line_col, draw_rect, self._arc_angles[0], self._arc_angles[1], self.get_style("outlinewidth"))
 
-                elif self.shape.lower() == "polygon" or self.shape.lower() == "pie":
+                elif self.shape.lower() == "polygon":
                     if self._pointlist is not None:
                         if fill_col is not None:
                             pygame.draw.polygon(self.image, fill_col, self._pointlist)
@@ -501,6 +511,19 @@ class Sprite_Shape(Sprite):
                                 self._pointlist,
                                 olw if olw is not None else 1,
                             )
+
+                elif self.shape.lower() == "wireframe":
+                    if self._wireframe is not None and line_col is not None:
+                        olw = self.get_style("outlinewidth")
+                        for polyline in self._wireframe:
+                            if len(polyline) >= 2:
+                                pygame.draw.lines(
+                                    surface=self.image,
+                                    color=line_col,
+                                    closed=False,
+                                    points=polyline,
+                                    width=olw if olw is not None else 1,
+                                )
 
                 else:  # Rectangle
                     if fill_col is not None:
@@ -602,16 +625,16 @@ class Sprite_TextBox(Sprite_Shape):
 
             if self.get_style("align_horiz") == "L":
                 text_rect.left = 0
-            elif self.get_style("align_horiz") == "C":
+            elif self.get_style("align_horiz") == "C" and self.rect is not None:
                 text_rect.centerx = int(self.rect.width / 2)
-            elif self.get_style("align_horiz") == "R":
+            elif self.get_style("align_horiz") == "R" and self.rect is not None:
                 text_rect.right = self.rect.width
 
             if self.get_style("align_vert") == "T":
                 text_rect.top = 0
-            elif self.get_style("align_vert") == "M":
+            elif self.get_style("align_vert") == "M" and self.rect is not None:
                 text_rect.centery = int(self.rect.height / 2)
-            elif self.get_style("align_vert") == "B":
+            elif self.get_style("align_vert") == "B" and self.rect is not None:
                 text_rect.bottom = self.rect.height
 
             if self.image is not None:

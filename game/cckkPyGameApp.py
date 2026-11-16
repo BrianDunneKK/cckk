@@ -51,8 +51,8 @@ class PyGameApp(cckkApp.cckkApp):
                 cckkApp.cckkApp.default_config, PyGameApp.default_config, app_config
             )
         )
-        self._width = self.get_config("width")
-        self._height = self.get_config("height")
+        self._width: int = self.get_config("width", 0)
+        self._height: int = self.get_config("height", 0)
         self._size = (self._width, self._height)
         cckkUtils.cckkImage.imagePath = self.get_config("image_path")
 
@@ -63,6 +63,14 @@ class PyGameApp(cckkApp.cckkApp):
             if self.display_surface is not None
             else pygame.Rect(0, 0, 0, 0)
         )
+
+    @property
+    def width(self) -> int:
+        return self._width
+
+    @property
+    def height(self) -> int:
+        return self._height
 
     @property
     def loops_per_sec(self):

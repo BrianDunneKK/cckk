@@ -44,6 +44,14 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
     def use_joystick(self):
         return ((self.get_config("control_type") & cckkUtils.CONTROL_JOYSTICK) > 0)
 
+    @property
+    def width(self) -> int:
+        return int(self.get_config("width", 0))
+    
+    @property
+    def height(self) -> int:
+        return int(self.get_config("height", 0))
+
     def get_config(self, attribute, default=None):
         try:
             return self._sm_config.get(attribute, default)
