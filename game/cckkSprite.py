@@ -135,8 +135,12 @@ class Sprite(pygame.sprite.Sprite):
 
     def _image_size_to_rect(self):
         if self.rect is not None:
-            self.rect.width = self.image.get_rect().width if self.image is not None else 0
-            self.rect.height = self.image.get_rect().height if self.image is not None else 0
+            self.rect.width = (
+                self.image.get_rect().width if self.image is not None else 0
+            )
+            self.rect.height = (
+                self.image.get_rect().height if self.image is not None else 0
+            )
 
     @property
     def cckkimage(self):
@@ -251,7 +255,7 @@ class Sprite(pygame.sprite.Sprite):
                 "Sprite.setup_mouse_events(): event_on_unclick must be of type Event"
             )
 
-    def enrich_event(self, ev : pygame.event.Event) -> pygame.event.Event:
+    def enrich_event(self, ev: pygame.event.Event) -> pygame.event.Event:
         return ev
 
     def create_mask(self):
@@ -408,7 +412,7 @@ class Sprite_Shape(Sprite):
             style=cckkUtils.merge_dicts(cckkColours.stylesheet.style("Shape"), style),
         )
         self._pointlist = None
-        self._wireframe : list[list[tuple[int, int]]] = [[]]
+        self._wireframe: list[list[tuple[int, int]]] = [[]]
         self._pie_angles = None
         if rect is not None and self.rect is not None:
             self.rect.topleft = rect.topleft
@@ -438,8 +442,11 @@ class Sprite_Shape(Sprite):
         self._pointlist = pointlist.copy()
         self._draw_reqd = True
 
-    def setup_wireframe(self, wireframe: list[list[tuple[int, int]]] = [[]]):
+    def setup_wireframe(
+        self, wireframe: list[list[tuple[int, int]]] = [[]], make_visible: bool = True
+    ):
         self._wireframe = wireframe.copy()
+        self.invisible = False
         self.draw(Sprite.DRAW_AFTER_CLEAR)
 
     def setup_pie(self, start_angle, stop_angle):
@@ -474,7 +481,11 @@ class Sprite_Shape(Sprite):
 
     def draw(self, draw_flag=Sprite.DRAW_AS_REQD, clear_draw_reqd=True):
         super().draw(draw_flag, clear_draw_reqd=False)
-        if (self._draw_reqd or draw_flag > Sprite.DRAW_AS_REQD) and not self.invisible and self.rect is not None:
+        if (
+            (self._draw_reqd or draw_flag > Sprite.DRAW_AS_REQD)
+            and not self.invisible
+            and self.rect is not None
+        ):
             draw_rect = self.rect.copy()
             draw_rect.topleft = (0, 0)
             fill_col = self.get_style_colour("fillcolour")
@@ -689,7 +700,14 @@ class SpriteGroup(pygame.sprite.LayeredUpdates):
 
 
 class SpriteGridSet(SpriteGroup):
-    def __init__(self, name:str, rect:cckkUtils.cckkRect, xcols:int, yrows:int, margin:int=0):
+    def __init__(
+        self,
+        name: str,
+        rect: cckkUtils.cckkRect,
+        xcols: int,
+        yrows: int,
+        margin: int = 0,
+    ):
         super().__init__(name)
         self.rect = rect
         self.xcols = xcols
@@ -697,10 +715,14 @@ class SpriteGridSet(SpriteGroup):
         self.margin = margin
 
     def add_shape_xy(self, sprite, x, y):
-        w = (self.rect.width - (self.xcols - 1) * self.margin) / self.xcols  # Shape width
-        h = (self.rect.height - (self.yrows - 1) * self.margin) / self.yrows  # Shape height
-        cx = self.rect.left + w/2 + (self.rect.width * x) / self.xcols
-        cy = self.rect.top + h/2 + (self.rect.height * y) / self.yrows
+        w = (
+            self.rect.width - (self.xcols - 1) * self.margin
+        ) / self.xcols  # Shape width
+        h = (
+            self.rect.height - (self.yrows - 1) * self.margin
+        ) / self.yrows  # Shape height
+        cx = self.rect.left + w / 2 + (self.rect.width * x) / self.xcols
+        cy = self.rect.top + h / 2 + (self.rect.height * y) / self.yrows
 
         if sprite.rect.width > 0 and sprite.rect.width < w:
             w = sprite.rect.width
