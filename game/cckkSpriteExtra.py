@@ -62,7 +62,7 @@ class Sprite_Canvas(cckkSprite.Sprite_Shape):
         return self._line_col
 
     @paint_colour.setter
-    def paint_colour(self, new_colour : tuple[int, int, int]):
+    def paint_colour(self, new_colour: tuple[int, int, int]):
         self._line_col = new_colour
 
     def clear(self):
@@ -249,9 +249,13 @@ class Sprite_Grid(cckkSprite.Sprite):
         event_on_click=None,
     ):
         cols, rows = cols_rows
-        xsize = int(rect.width/cols)
-        ysize = int(rect.height/rows) if rows is not None else int(rect.height/cols)
-        self.setup_grid(cols_rows = cols_rows, xsize_ysize = (xsize, ysize), event_on_click=event_on_click,)
+        xsize = int(rect.width / cols)
+        ysize = int(rect.height / rows) if rows is not None else int(rect.height / cols)
+        self.setup_grid(
+            cols_rows=cols_rows,
+            xsize_ysize=(xsize, ysize),
+            event_on_click=event_on_click,
+        )
         self.rect.topleft = rect.topleft
 
     def cell_rect(self, col, row, relative=False):
@@ -299,10 +303,10 @@ class Sprite_Grid(cckkSprite.Sprite):
                     event_data[i][j] = {}
         self._event_data = event_data
 
-    def enrich_event(self, ev : pygame.event.Event) -> pygame.event.Event:
+    def enrich_event(self, ev: pygame.event.Event) -> pygame.event.Event:
         xcol, yrow = self.find_cell(ev.pos, allow_outside=False)
         if 0 <= yrow < len(self._event_data) and 0 <= xcol < len(self._event_data[0]):
-            ev_extra_data = self._event_data[yrow][xcol] 
+            ev_extra_data = self._event_data[yrow][xcol]
             return cckkUtils.EventManager.extend_event(ev, ev_extra_data)
         else:
             return ev
@@ -340,7 +344,11 @@ class Sprite_BoardGame_Board(Sprite_Grid):
                         col = self.get_style_colour("fillcolour")
                 if col is not None and self.image is not None:
                     pygame.draw.rect(self.image, col, r)
-                if img is not None and self.image is not None and img.surface is not None:
+                if (
+                    img is not None
+                    and self.image is not None
+                    and img.surface is not None
+                ):
                     self.image.blit(img.surface, r)
                 line_col = self.get_style_colour("outlinecolour")
                 line_w = self.get_style("outlinewidth", 1)
@@ -509,21 +517,43 @@ class Sprite_ImageGridActor(cckkSprite.Sprite_Animation, cckkUtils.GridActor):
 ### --------------------------------------------------
 
 
-class Sprite_ColouredGrid(Sprite_Grid):
-    def __init__(self, name="Coloured Grid", colours: list[list[str]] = [[]]):
-        super().__init__(name)
+# class Sprite_ColouredGrid(Sprite_Grid):
+class Sprite_ColouredGrid(cckkSprite.SpriteGridSet):
+    def __init__(
+        self,
+        name: str = "Coloured Grid",
+        rect: cckkUtils.cckkRect = cckkUtils.cckkRect(),
+        colours: list[list[str]] = [[]],
+        ev_action: str = "SelectColour",
+    ):
+        yrows = len(colours)
+        xcols = len(colours[0]) if yrows > 0 else 0
+        super().__init__(name=name, rect=rect, xcols=xcols, yrows=yrows)
 
         self._rgb_colours: list[list[tuple[int, int, int]]] = [
             [cckkColours.colours[colour] for colour in sublist] for sublist in colours
         ]
 
-        # prepare colour names and RGB tuples for enrish_event()
-        ev_data = [
-            [{"colour": colour, "rgb": cckkColours.colours[colour], "foo": "bar"} for colour in row]
-            for row in colours
-        ]
-        self.setup_grid_events(ev_data)
+        for yrow in range(yrows):
+            for xcol in range(xcols):
+                colour = ""
+                if len(colours) > yrow and len(colours[yrow]) > xcol:
+                    colour = colours[yrow][xcol]
+                self.add_sprite_xy(
+                    cckkSprite.Sprite_Shape(
+                        style={"fillcolour": colour, "outlinewidth": 1}
+                    ),
+                    x=xcol,
+                    y=yrow,
+                    click_event_data={"action":ev_action, "colour": colour, "rgb": cckkColours.colours[colour]},
+                )
 
+        # prepare colour names and RGB tuples for enrish_event()
+        # ev_data = [
+        #     [{"colour": colour, "rgb": cckkColours.colours[colour]} for colour in row]
+        #     for row in colours
+        # ]
+        # self.setup_grid_events(ev_data)
 
     def draw(self, draw_flag=cckkSprite.Sprite.DRAW_AS_REQD, clear_draw_reqd=True):
         if self._draw_reqd or draw_flag:
@@ -532,7 +562,9 @@ class Sprite_ColouredGrid(Sprite_Grid):
         for i in range(0, self.cols):
             for j in range(0, self.rows):
                 r = self.cell_rect(i, j, True)
-                if 0 <= j < len(self._rgb_colours) and 0 <= i < len(self._rgb_colours[j]):
+                if 0 <= j < len(self._rgb_colours) and 0 <= i < len(
+                    self._rgb_colours[j]
+                ):
                     col = self._rgb_colours[j][i]
                 else:
                     col = None

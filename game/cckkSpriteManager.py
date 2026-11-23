@@ -18,7 +18,9 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
             self.set_config(key, value)
 
         if self.get_config("control_type") is None:
-            self.set_config("control_type", cckkUtils.CONTROL_KEYBOARD+cckkUtils.CONTROL_MOUSE)
+            self.set_config(
+                "control_type", cckkUtils.CONTROL_KEYBOARD + cckkUtils.CONTROL_MOUSE
+            )
 
     @property
     def game_is_active(self):
@@ -34,20 +36,20 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
 
     @property
     def use_keyboard(self):
-        return ((self.get_config("control_type") & cckkUtils.CONTROL_KEYBOARD) > 0)
+        return (self.get_config("control_type") & cckkUtils.CONTROL_KEYBOARD) > 0
 
     @property
     def use_mouse(self):
-        return ((self.get_config("control_type") & cckkUtils.CONTROL_MOUSE) > 0)
+        return (self.get_config("control_type") & cckkUtils.CONTROL_MOUSE) > 0
 
     @property
     def use_joystick(self):
-        return ((self.get_config("control_type") & cckkUtils.CONTROL_JOYSTICK) > 0)
+        return (self.get_config("control_type") & cckkUtils.CONTROL_JOYSTICK) > 0
 
     @property
     def width(self) -> int:
         return int(self.get_config("width", 0))
-    
+
     @property
     def height(self) -> int:
         return int(self.get_config("height", 0))
@@ -68,15 +70,68 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
         else:
             return default
 
+    def size_as_dict(self) -> dict[str, int]:
+        return {"width": self.width, "height": self.height}
+
     @property
     def app_boundary(self):
         app = self.get_config("cdkkApp", None)
         if app is None:
-            app = cckkApp._cdkkApp
+            app = cckkApp._cckkApp
         if app is not None:
             return app.boundary
         else:
             return None
+
+    def scale_xy_to_boundary(
+        self,
+        pos_xy: tuple[float, float],
+        mirror: bool = True,
+        scale_to: tuple[int, int] = (0, 0),
+        pos_min: tuple[float, float] = (0.0, 0.0),
+        pos_max: tuple[float, float] = (1.0, 1.0),
+    ) -> tuple[int, int]:
+        if pos_xy is None or len(pos_xy) < 2:
+            return pos_xy
+
+        if len(scale_to) >= 2 and scale_to[0] == 0 and scale_to[1] == 0:
+            scale_to = (self.width, self.height)
+        x = pos_xy[0] if not mirror else (1.0 - pos_xy[0])
+        if (
+            len(pos_xy) >= 2
+            and len(scale_to) >= 2
+            and len(pos_min) >= 2
+            and len(pos_max) >= 2
+        ):
+            xpos = ((x - pos_min[0]) / (pos_max[0] - pos_min[0])) * scale_to[0]
+            ypos = ((pos_xy[1] - pos_min[1]) / (pos_max[1] - pos_min[1])) * scale_to[1]
+            return (int(xpos), int(ypos))
+        return pos_xy
+
+    def scale_wireframe_to_boundary(
+        self,
+        wireframe: list[list[tuple[float, float]]],
+        mirror: bool = True,
+        scale_to: tuple[int, int] = (0, 0),
+        pos_min: tuple[float, float] = (0.0, 0.0),
+        pos_max: tuple[float, float] = (1.0, 1.0),
+    ) -> list[list[tuple[int, int]]]:
+        wf: list[list[tuple[int, int]]] = [[]]
+        if wireframe is not None:
+            wf = [
+                [
+                    self.scale_xy_to_boundary(
+                        pos_xy=pt,
+                        mirror=mirror,
+                        scale_to=scale_to,
+                        pos_min=pos_min,
+                        pos_max=pos_max,
+                    )
+                    for pt in sublist
+                ]
+                for sublist in wireframe
+            ]
+        return wf
 
     def draw(self, surface):
         for s in self.sprites():
@@ -93,9 +148,9 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
     def find_sprites_by_desc(self, attr1, value1, attr2=None, value2=None):
         ret_sprites = []
         for s in self.sprites():
-            found = (s.get_config(attr1) == value1)
+            found = s.get_config(attr1) == value1
             if found and attr2 is not None and value2 is not None:
-                found = (s.get_config(attr2) == value2)
+                found = s.get_config(attr2) == value2
             if found:
                 ret_sprites.append(s)
         return ret_sprites
@@ -109,6 +164,13 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
             return None
         else:
             return result[0]
+
+    def find_sprite_by_xy(self, x: int, y: int) -> cckkSprite.Sprite | None:
+        ret_sprite = None
+        for s in self.sprites():
+            if s.rect.collidepoint(x, y) and ret_sprite is None:
+                ret_sprite = s
+        return ret_sprite
 
     def kill_uuid(self, uuid):
         found = False
@@ -164,11 +226,20 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
         if e.type == cckkUtils.EVENT_GAME_CONTROL:
             if e.action == "MouseLeftClick" or e.action == "MouseUnclick":
                 x, y = e.pos
-                sprite_str = self.find_click(
-                    x, y, (e.action == "MouseLeftClick"))
-                dealt_with = (sprite_str != "")
+                sprite_str = self.find_click(x, y, (e.action == "MouseLeftClick"))
+                dealt_with = sprite_str != ""
             elif e.action == "KillSpriteUUID":
                 dealt_with = self.kill_uuid(e.uuid)
+
+            if hasattr(e, "pos") and hasattr(e, "action"):
+                x, y = e.pos
+                s = self.find_sprite_by_xy(x, y)
+                new_ev = None
+                if s is not None:
+                    new_ev = s.get_event(e.type, e.action)
+                if new_ev is not None:
+                    cckkUtils.EventManager.post(new_ev)
+
         return dealt_with
 
     def cleanup(self):
@@ -188,37 +259,50 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
             s.end_game()
         self._game_active = False
 
+
 # --------------------------------------------------
 
 
 class SM_Scoreboard(SpriteManager):
-    def __init__(self, game_time=None, limits=None, score_style=None, timer_style=None, fps_style=None, gameover_style=None, name="Scoreboard Manager"):
+    def __init__(
+        self,
+        game_time=None,
+        limits=None,
+        score_style=None,
+        timer_style=None,
+        fps_style=None,
+        gameover_style=None,
+        name="Scoreboard Manager",
+    ):
         super().__init__(name)
         if limits is None:
             limits = self.app_boundary
 
-        default_style = {"fillcolour": None,
-                         "outlinecolour": None, "align_horiz": "L"}
+        default_style = {"fillcolour": None, "outlinecolour": None, "align_horiz": "L"}
         score_style = cckkUtils.merge_dicts(default_style, score_style)
         timer_style = cckkUtils.merge_dicts(default_style, timer_style)
         fps_style = cckkUtils.merge_dicts(default_style, {"invisible": True}, fps_style)
 
         self._score_value = 0
         self.score_text = cckkSprite.Sprite_TextBox(
-            "Score", cckkUtils.cckkRect(70, 10, 200, 40), score_style)
+            "Score", cckkUtils.cckkRect(70, 10, 200, 40), score_style
+        )
         self.score_text.set_text_format("Score: {0}", self._score_value)
         self.add(self.score_text)
 
         self._game_time = 0
         self.game_time = game_time
-        self.timer_text = cckkSprite.Sprite_TextBox("Time Left", cckkUtils.cckkRect(
-            limits.width - 250, 10, 200, 40), timer_style)
-        self.timer_text.set_text_format("Time Left: {0:0.1f}",
-                                        self.time_left)
+        self.timer_text = cckkSprite.Sprite_TextBox(
+            "Time Left",
+            cckkUtils.cckkRect(limits.width - 250, 10, 200, 40),
+            timer_style,
+        )
+        self.timer_text.set_text_format("Time Left: {0:0.1f}", self.time_left)
         self.add(self.timer_text)
 
-        self.fps_text = cckkSprite.Sprite_TextBox("FPS", cckkUtils.cckkRect(
-            limits.centerx-100, 10, 200, 40), fps_style)
+        self.fps_text = cckkSprite.Sprite_TextBox(
+            "FPS", cckkUtils.cckkRect(limits.centerx - 100, 10, 200, 40), fps_style
+        )
         self.fps_text.set_text_format("FPS: {0:4.1f}", 0)
         self.add(self.fps_text)
 
@@ -241,8 +325,9 @@ class SM_Scoreboard(SpriteManager):
     def game_time(self, new_game_time):
         self._game_time = new_game_time
         if new_game_time is not None:
-            self._timer = cckkUtils.Timer(self.game_time, cckkUtils.EVENT_GAME_TIMER_1,
-                                auto_start=False)
+            self._timer = cckkUtils.Timer(
+                self.game_time, cckkUtils.EVENT_GAME_TIMER_1, auto_start=False
+            )
         else:
             self._timer = None
 
@@ -295,6 +380,7 @@ class SM_Scoreboard(SpriteManager):
     def clear_game_over(self):
         self.remove(self.game_over)
 
+
 # --------------------------------------------------
 
 
@@ -314,7 +400,8 @@ class SM_SplashScreen(SpriteManager):
 
         if self.get_app_config("auto_start") == True:
             logger.warning(
-                'Splash Screen Manager will not work as auto_start is set to True.')
+                "Splash Screen Manager will not work as auto_start is set to True."
+            )
 
     def start_game(self):
         super().start_game()
@@ -327,5 +414,6 @@ class SM_SplashScreen(SpriteManager):
                 self.clear_splash()
                 dealt_with = True
         return dealt_with
+
 
 # --------------------------------------------------

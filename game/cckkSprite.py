@@ -1,3 +1,4 @@
+# To Do: CHnage event_on_click and event_on_unclick to use _event_map and convert to properties
 # To Do: Add default style to app_config
 # To Do: Change "GameOver" to "EndGame"
 # To Do: msecs_per_image not implemented
@@ -11,7 +12,7 @@ import pygame
 import pygame.gfxdraw
 import pygame.event
 import uuid
-from math import sin, cos
+from math import sin, cos, floor
 import cckk.game.cckkUtils as cckkUtils
 import cckk.game.cckkColours as cckkColours
 
@@ -58,6 +59,7 @@ class Sprite(pygame.sprite.Sprite):
         self._image = cckkUtils.cckkImage()
         self.event_on_click = None
         self.event_on_unclick = None
+        self._event_map: dict[tuple[int, str], pygame.event.Event] = {}
         self._draw_reqd = False
         self._game_active = None
         self._style = cckkColours.Style()
@@ -241,6 +243,22 @@ class Sprite(pygame.sprite.Sprite):
     def process_image(self, commands_values, **kwargs):
         self._image.process_list(commands_values, **kwargs)
 
+    def set_event(
+        self,
+        type: int = cckkUtils.EVENT_GAME_CONTROL,
+        action: str = "",
+        event: pygame.event.Event | None = None,
+    ) -> None:
+        if action != "" and event is not None:
+            self._event_map[(type, action)] = event
+
+    def get_event(
+        self,
+        type: int = cckkUtils.EVENT_GAME_CONTROL,
+        action: str = "",
+    ) -> pygame.event.Event | None:
+        return self._event_map.get((type, action), None)
+
     def setup_mouse_events(self, event_on_click, event_on_unclick=None):
         if type(event_on_click).__name__ == "Event" or event_on_click == None:
             self.event_on_click = event_on_click
@@ -256,7 +274,13 @@ class Sprite(pygame.sprite.Sprite):
             )
 
     def enrich_event(self, ev: pygame.event.Event) -> pygame.event.Event:
-        return ev
+        type = ev.type
+        action = ev.action if hasattr(ev, "action") else ""
+        ev_extra_data = self._event_map.get((type, action), {})
+        if len(ev_extra_data):
+            return cckkUtils.EventManager.extend_event(ev, ev_extra_data)
+        else:
+            return ev
 
     def create_mask(self):
         self.mask = (
@@ -673,27 +697,27 @@ class SpriteGroup(pygame.sprite.LayeredUpdates):
 
     def __init__(self, name, *sprites, **kwargs):
         super().__init__(*sprites, **kwargs)
-        self._desc = {}
+        self._group_data = {}
         self.set_config("name", name)
         self.rect = None
 
     def get_config(self, attribute, no_value=None):
-        if attribute in self._desc:
-            return self._desc[attribute]
+        if attribute in self._group_data:
+            return self._group_data[attribute]
         else:
             return no_value
 
     def set_config(self, attribute, value):
-        self._desc[attribute] = value
+        self._group_data[attribute] = value
 
     @property
     def name(self):
         return self.get_config("name")
 
-    def draw_sprites(self, image):
-        for s in self.sprites():
-            s.image = image
-            s.draw()
+    # def draw_sprites(self, image):
+    #     for s in self.sprites():
+    #         s.image = image
+    #         s.draw()
 
 
 # --------------------------------------------------
@@ -709,18 +733,29 @@ class SpriteGridSet(SpriteGroup):
         margin: int = 0,
     ):
         super().__init__(name)
-        self.rect = rect
-        self.xcols = xcols
-        self.yrows = yrows
-        self.margin = margin
+        self.rect: cckkUtils.cckkRect = rect
+        self.xcols: int = xcols
+        self.yrows: int = yrows
+        self.margin: int = margin
+        self.cell_width: int = int(
+            (self.rect.width - (self.xcols - 1) * self.margin) / self.xcols
+        )
+        self.cell_height: int = int(
+            (self.rect.height - (self.yrows - 1) * self.margin) / self.yrows
+        )
 
-    def add_shape_xy(self, sprite, x, y):
-        w = (
-            self.rect.width - (self.xcols - 1) * self.margin
-        ) / self.xcols  # Shape width
-        h = (
-            self.rect.height - (self.yrows - 1) * self.margin
-        ) / self.yrows  # Shape height
+    def add_sprite_xy(self, sprite: Sprite, x:int, y:int, click_event_data:dict={}):
+        if len(click_event_data) > 0:
+            action = click_event_data.get("action", "")
+            click_event_data.pop("action")
+            ev = cckkUtils.EventManager.create_event(
+                event_type=cckkUtils.EVENT_GAME_CONTROL,
+                action=action,
+                **click_event_data
+            )
+            sprite._event_map[(cckkUtils.EVENT_GAME_CONTROL, "MouseLeftClick")] = ev
+        w = self.cell_width
+        h = self.cell_height
         cx = self.rect.left + w / 2 + (self.rect.width * x) / self.xcols
         cy = self.rect.top + h / 2 + (self.rect.height * y) / self.yrows
 
@@ -736,12 +771,19 @@ class SpriteGridSet(SpriteGroup):
         sprite.set_config("yrow", y)
         self.add(sprite)
 
-    def find_shape_xy(self, x, y):
+    def find_sprite_xy(self, x, y):
         ret_sprite = None
         for s in self.sprites():
             if s.get_config("xcol") == x and s.get_config("yrow") == y:
                 ret_sprite = s
         return ret_sprite
+
+    # def enrich_event(self, ev: pygame.event.Event) -> pygame.event.Event:
+    #     x, y = ev.pos
+    #     xcol = floor(self.xcols * ((x - self.rect.left) / self.rect.width))
+    #     yrow = floor(self.yrows * ((y - self.rect.top) / self.rect.height))
+    #     ev_extra_data = self._event_data.get((xcol, yrow), {})
+    #     return cckkUtils.EventManager.extend_event(ev, ev_extra_data)
 
 
 # --------------------------------------------------
