@@ -193,6 +193,12 @@ class cckkEdgeAIResult:
         pos = self.pos_xyz_raw(obj_idx=obj_idx, lm_idx=lm_idx)
         return (pos[0], pos[1])
 
+    def pos_xy_all(self, obj_idx: int = 0) -> list[tuple[float, float]]:
+        all_lm: list[tuple[float, float]] = []
+        for l in range(self.num_landmarks(obj_idx=obj_idx)):
+            all_lm.append(self.pos_xy_raw(obj_idx=obj_idx, lm_idx=l))
+        return all_lm
+
     def landmark_vector(
         self, obj0_idx: int = 0, lm0_idx: int = 0, obj1_idx: int = 0, lm1_idx: int = 0
     ) -> cckkVector2D:

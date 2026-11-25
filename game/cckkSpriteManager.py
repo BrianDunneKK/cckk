@@ -108,6 +108,28 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
             return (int(xpos), int(ypos))
         return pos_xy
 
+    def scale_xy_list_to_boundary(
+        self,
+        pos_xy_list: list[tuple[float, float]],
+        mirror: bool = True,
+        scale_to: tuple[int, int] = (0, 0),
+        pos_min: tuple[float, float] = (0.0, 0.0),
+        pos_max: tuple[float, float] = (1.0, 1.0),
+    ) -> list[tuple[int, int]]:
+        xy_list: list[tuple[int, int]] = []
+        if pos_xy_list is not None:
+            xy_list = [
+                self.scale_xy_to_boundary(
+                    pos_xy=pt,
+                    mirror=mirror,
+                    scale_to=scale_to,
+                    pos_min=pos_min,
+                    pos_max=pos_max,
+                )
+                for pt in pos_xy_list
+            ]
+        return xy_list
+
     def scale_wireframe_to_boundary(
         self,
         wireframe: list[list[tuple[float, float]]],
@@ -119,16 +141,13 @@ class SpriteManager(pygame.sprite.LayeredUpdates):
         wf: list[list[tuple[int, int]]] = [[]]
         if wireframe is not None:
             wf = [
-                [
-                    self.scale_xy_to_boundary(
-                        pos_xy=pt,
-                        mirror=mirror,
-                        scale_to=scale_to,
-                        pos_min=pos_min,
-                        pos_max=pos_max,
-                    )
-                    for pt in sublist
-                ]
+                self.scale_xy_list_to_boundary(
+                    pos_xy_list=sublist,
+                    mirror=mirror,
+                    scale_to=scale_to,
+                    pos_min=pos_min,
+                    pos_max=pos_max,
+                )
                 for sublist in wireframe
             ]
         return wf

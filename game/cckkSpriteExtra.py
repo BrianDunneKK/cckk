@@ -2,6 +2,7 @@ import pygame
 import cckk.game.cckkUtils as cckkUtils
 import cckk.game.cckkSprite as cckkSprite
 import cckk.game.cckkColours as cckkColours
+from itertools import islice, zip_longest
 
 sprite_extra_styles = {
     "Label": {"fillcolour": None, "outlinecolour": None, "textsize": 36},
@@ -517,7 +518,6 @@ class Sprite_ImageGridActor(cckkSprite.Sprite_Animation, cckkUtils.GridActor):
 ### --------------------------------------------------
 
 
-# class Sprite_ColouredGrid(Sprite_Grid):
 class Sprite_ColouredGrid(cckkSprite.SpriteGridSet):
     def __init__(
         self,
@@ -545,38 +545,96 @@ class Sprite_ColouredGrid(cckkSprite.SpriteGridSet):
                     ),
                     x=xcol,
                     y=yrow,
-                    click_event_data={"action":ev_action, "colour": colour, "rgb": cckkColours.colours[colour]},
+                    click_event_data={
+                        "action": ev_action,
+                        "colour": colour,
+                        "rgb": cckkColours.colours[colour],
+                    },
                 )
 
-        # prepare colour names and RGB tuples for enrish_event()
-        # ev_data = [
-        #     [{"colour": colour, "rgb": cckkColours.colours[colour]} for colour in row]
-        #     for row in colours
-        # ]
-        # self.setup_grid_events(ev_data)
 
-    def draw(self, draw_flag=cckkSprite.Sprite.DRAW_AS_REQD, clear_draw_reqd=True):
-        if self._draw_reqd or draw_flag:
-            self._draw_reqd = False
+### --------------------------------------------------
 
-        for i in range(0, self.cols):
-            for j in range(0, self.rows):
-                r = self.cell_rect(i, j, True)
-                if 0 <= j < len(self._rgb_colours) and 0 <= i < len(
-                    self._rgb_colours[j]
-                ):
-                    col = self._rgb_colours[j][i]
-                else:
-                    col = None
-                if col is not None and self.image is not None:
-                    pygame.draw.rect(self.image, col, r)
-                line_col = self.get_style_colour("outlinecolour")
-                line_w = self.get_style("outlinewidth", 1)
-                if line_col is not None and self.image is not None:
-                    pygame.draw.rect(self.image, line_col, r, line_w)
 
-        if clear_draw_reqd:
-            self._draw_reqd = False
+class Sprite_TextBoxGrid(cckkSprite.SpriteGridSet):
+
+    def __init__(
+        self,
+        name: str = "Text Box Grid",
+        name_texts: list[list[str]] = [[]],
+        rect: cckkUtils.cckkRect = cckkUtils.cckkRect(),
+        style: dict = {},
+        margin: int = 0,
+    ):
+        yrows = len(name_texts)
+        xcols = len(name_texts[0]) if yrows > 0 else 0
+        super().__init__(name=name, rect=rect, xcols=xcols, yrows=yrows, margin=margin)
+
+        for yrow in range(yrows):
+            for xcol in range(xcols):
+                text = ""
+                if len(name_texts) > yrow and len(name_texts[yrow]) > xcol:
+                    text = name_texts[yrow][xcol]
+                self.add_sprite_xy(
+                    cckkSprite.Sprite_TextBox(
+                        name_text=text, style=style, auto_size=False, name_is_text=True
+                    ),
+                    x=xcol,
+                    y=yrow,
+                )
+
+    @property
+    def text_format(self):
+        return
+
+    @text_format.setter
+    def text_format(self, new_text_format):
+        for yrow in range(self.yrows):
+            for xcol in range(self.xcols):
+                s = self.find_sprite_xy(xcol, yrow)
+                if s is not None:
+                    s.text_format = new_text_format
+
+    def set_text_xy(self, xcol: int, yrow: int, *args):
+        s = self.find_sprite_xy(xcol, yrow)
+        if s is not None:
+            s.set_text(*args)
+
+    def set_text_grid(self, text_grid: list[list[str]]):
+        for yrow in range(len(text_grid)):
+            for xcol in range(len(text_grid[yrow])):
+                s = self.find_sprite_xy(xcol, yrow)
+                if s is not None:
+                    s.text = text_grid[yrow][xcol]
+
+    def set_text_list(
+        self,
+        text_list: list[str],
+        fill: str = "",
+        by_column: bool = False,
+    ):
+        if self.yrows <= 0 or self.xcols <= 0:
+            return
+
+        if by_column:
+            # Slice `items` into `cols` vertical columns of length up to `rows`
+            columns = [
+                text_list[c * self.yrows : (c + 1) * self.yrows]
+                for c in range(self.xcols)
+            ]
+            text_grid = [
+                list(row)
+                for row in islice(zip_longest(*columns, fillvalue=fill), self.yrows)
+            ]
+        else:
+            it = iter(text_list)
+            row_chunks = [list(islice(it, self.xcols)) for _ in range(self.yrows)]
+            text_grid = [
+                (chunk + [fill] * (self.xcols - len(chunk)))[: self.xcols]
+                for chunk in row_chunks
+            ]
+
+        self.set_text_grid(text_grid=text_grid)
 
 
 ### --------------------------------------------------

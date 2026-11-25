@@ -620,7 +620,6 @@ class Sprite_TextBox(Sprite_Shape):
 
     def set_text_format(self, new_text_format, *args):
         self.text_format = new_text_format
-        text_fmt = self.get_style("textformat")
         if new_text_format is None:
             self.text = ""
         else:
